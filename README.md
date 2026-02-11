@@ -6,6 +6,15 @@ Whether it will be expanded in the future? We'll see. No promises.
 
 ---
 
+## Environment Setup
+
+Create a `.env` file under the `apps/` directory (or set the environment variables listed in `apps/env_sample` by other means). See `apps/env_sample` for the full list of required variables.
+
+- `TAVILY_API_KEY_0` is **required** at minimum.
+- You can register multiple Tavily API keys — just number them starting from `0` (e.g. `TAVILY_API_KEY_0`, `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).
+
+---
+
 ### Build and local deploy
 
 ```bash
