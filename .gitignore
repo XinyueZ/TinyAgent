@@ -1,8 +1,7 @@
 __pycache__
 tmp/
 output/
-db/
-notebooks/
+db/ 
 *.http
 .env
 .idea/
