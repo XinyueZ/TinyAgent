@@ -100,7 +100,7 @@ python ./deep-research.py --output ./deep-research-output
 ```
 
 - `--output` (required): Output directory for results
-- `--tasks` (optional): Directory containing task files (`.md`). Defaults to `./tasks/` in the app folder.
+- `--tasks` (optional): Directory containing task files (`.md`). **Defaults** to `./tasks/` in the app folder 🔥 in container.
 
 ---
 
