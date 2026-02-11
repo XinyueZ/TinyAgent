@@ -8,3 +8,4 @@ db/
 .DS_Store
 *.log
 *output/
+.windsurf/ 

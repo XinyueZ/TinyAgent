@@ -11,3 +11,4 @@ venv
 .DS_Store
 notebooks
 notebooks/
+.windsurf/ 
