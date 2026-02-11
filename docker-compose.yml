@@ -1,0 +1,42 @@
+services:
+  # Development container with full volume mount
+  TinyAgentDev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    container_name: TinyAgentDev
+    volumes:
+      - .:/app
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    entrypoint: ["/bin/bash"]
+
+  # Deep Research Multi-Agents Tool
+  deep-research-multi-agents-tool-tavily-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/deep-research-multi-agents-tool-tavily-search/deep-research.py"]
+
+  # Single Tavily Search Agent
+  single-tavily-search-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/single-tavily-search-agent/agent.py"]

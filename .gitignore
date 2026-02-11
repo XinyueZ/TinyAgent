@@ -1,0 +1,11 @@
+__pycache__
+tmp/
+output/
+db/
+notebooks/
+*.http
+.env
+.idea/
+.DS_Store
+*.log
+*output/
