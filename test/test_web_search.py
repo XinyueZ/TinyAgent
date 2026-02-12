@@ -18,8 +18,10 @@ def _configs():
 
     search_model = "gemini-2.5-flash-lite"
     search_model_config = {
-        "temperature": 0.0,
+        "temperature": 1.0,
         "seed": 42,
+        "top_p": 1.0,
+        "top_k": 60,
         "thinking_config": types.ThinkingConfig(
             thinking_budget=0,
             include_thoughts=False,
