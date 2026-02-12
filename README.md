@@ -14,6 +14,8 @@ Whether it will be expanded in the future? We'll see. No promises.
 - [Environment Setup](#environment-setup)
 - [Apps](#apps)
   - [Run Examples](#run-examples)
+  - [Developing Apps](#developing-apps)
+- [Agent Output Artifacts](#agent-output-artifacts)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
 - [License](#license)
@@ -173,6 +175,23 @@ cd labubuVShellokitty
 # Or single agent
 .../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
 ```
+
+### Developing Apps
+
+All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+
+---
+
+## Agent Output Artifacts
+
+During execution, agents produce several files in the `--output` directory. These artifacts serve as the agent's "memory" and reasoning trace. All tools are defined in `tiny_agent/tools/buildin_tools.py`.
+
+| File | Description | Read/Write Pattern |
+|------|-------------|--------------------|
+| `work_plan.md` | The agent's structured work plan (i.e. todo list). Created at the start of a task and updated as the agent progresses through sub-tasks. | Created via `create_work_plan`, read via `read_work_plan`, updated via `update_work_plan` |
+| `memory.md` | Accumulated execution context and key findings. The agent appends entries as it discovers new information, acting as a persistent scratchpad across steps. | Read via `read_memory`, appended via `update_memory` |
+| `reflection.md` | The agent's self-reflection and decision-making reasoning. Captures why certain choices were made and lessons learned during execution. | Appended via `reflect` |
+| `result.md` | The final research output or deliverable. Contains the synthesized answer or report produced by the agent for the given task. | Written by the agent at the end of execution |
 
 ---
 

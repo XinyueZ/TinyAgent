@@ -38,6 +38,18 @@ RESEARCH_AGENT_MODEL_CONFIG = {
     ),
 }
 
+SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+SEARCH_AGENT_MODEL_CONFIG = {
+    "temperature": 1.0,
+    "seed": 42,
+    "top_p": 1.0,
+    "top_k": 60,
+    "thinking_config": types.ThinkingConfig(
+        thinking_budget=-1,
+        include_thoughts=False,
+    ),
+}
+
 SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
 SUMMARIZE_MODEL_CONFIG = {
     "temperature": 0.0,

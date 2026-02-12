@@ -43,7 +43,7 @@ Save the report to a file at the path "{output_path}".
 _RESEARCHER_PROMPT = """
 Your task is to conduct deep research on the topic: {topic}.
 
-Use the web_search tool to perform a web search for the topic. Search for **at most 3 results**.
+Use the **all possible internet or web search tools** to perform a web search for the topic. Search for **at most 3 results**.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
 Record the **full raw data of research results** into memory.
 

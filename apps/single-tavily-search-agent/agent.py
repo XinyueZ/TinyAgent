@@ -3,17 +3,14 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-import os
 from pathlib import Path
 from tiny_agent.tools.decorator import *
 from tiny_agent.agent.tiny_agent import TinyAgent
-from tiny_agent.tools.web.tavily_search import TavilySearch
+from tiny_agent.tools.web.tools import tavily_search, google_search
 from apps import (
     PROVIDER_CONFIG,
     MAIN_AGENT_MODEL,
     MAIN_AGENT_MODEL_CONFIG,
-    SUMMARIZE_MODEL,
-    SUMMARIZE_MODEL_CONFIG,
 )
 
 
@@ -31,7 +28,7 @@ The task:
 
 Decompose the task into piece of research topics and compile them into a list. 
 
-Use the web_search tool to perform a web search for each topic **ONE BY ONE**. Search for **at most 3 results** for each topic.
+Use the **all possible internet or web search tools** to perform a web search for each topic **ONE BY ONE**. Search for **at most 3 results** for each topic.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise. Citation URLs are important; please carry them together with the results.
 Record the **full raw data of research results** into memory.
 
@@ -51,44 +48,6 @@ Save the report to a file with the path "{output_path}".
 
 **Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, stop working.
 """
-
-
-@tool()
-def web_search(query: str) -> str:
-    """Perform a web search using Tavily API.
-
-    Args:
-        query: The search query to execute.
-
-    Returns:
-        A Python `str` with the following format:
-        1. response: The search results with summaries
-    """
-
-    def _get_tavily_api_key_count() -> int:
-        """Auto-calculate the number of TAVILY_API_KEY_ prefixed environment variables."""
-        count = 0
-        while os.getenv(f"TAVILY_API_KEY_{count}") is not None:
-            count += 1
-        return max(count, 1)
-
-    api_key_count = _get_tavily_api_key_count()
-    for i in range(5):
-        try:
-            key_index = int(os.environ.get("TAVILY_API_KEY_INDEX", 0))
-            api_key = os.getenv(f"TAVILY_API_KEY_{key_index % api_key_count}")
-            tavily_search = TavilySearch(
-                api_key=api_key,
-                summarize_model=SUMMARIZE_MODEL,
-                **{**SUMMARIZE_MODEL_CONFIG, **PROVIDER_CONFIG},
-            )
-            os.environ["TAVILY_API_KEY_INDEX"] = str(key_index + 1)
-            return tavily_search(query)
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            return f"Failed to search. Error: {str(e)}, query: {query}"
 
 
 # python ./agent.py --output ./agent-output
@@ -134,7 +93,7 @@ if __name__ == "__main__":
         name="main_agent",
         model=MAIN_AGENT_MODEL,
         output_root=args.output,
-        tools=[web_search],
+        tools=[tavily_search, google_search],
         **{**MAIN_AGENT_MODEL_CONFIG, **PROVIDER_CONFIG},
     )
 
