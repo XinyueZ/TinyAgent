@@ -210,7 +210,7 @@ In this case study, the **deep research** pattern is generally **better** than a
 
 🎥 YouTube walkthrough (click the preview):
 
-[![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/CD8jUp_YXtw)
+ [![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/JMOZ5JFBYyo)
 
 
 <a id="tools"></a>
