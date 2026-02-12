@@ -123,7 +123,7 @@ class TavilySearch(BaseWebSearch):
                 if result.get("content", "").strip()
                 else ""
             )
-            formatted_output += "-" * 80 + "\n"
+            formatted_output += "-" * 10 + "\n"
         return formatted_output
 
     def __call__(

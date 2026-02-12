@@ -1,5 +1,5 @@
-# Core dependencies
 python-dotenv==1.2.1
+pytest==9.0.2
 google-genai==1.62.0
 rich==14.3.2
 pydantic==2.12.5

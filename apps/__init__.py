@@ -9,7 +9,7 @@ PROVIDER_CONFIG = {
     "vertexai": bool(os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", True)),
     "vertexai_location": os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west4"),
     "vertexai_project": os.environ.get(
-        "GOOGLE_CLOUD_PROJECT", "hg-a1050-ai-ft-exp-pr-1234"
+        "GOOGLE_CLOUD_PROJECT", "hg-hjghjg-ai-ft-exp-pr-hjjkhljhlhjkl"
     ),
     "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
 }
