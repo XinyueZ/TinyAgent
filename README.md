@@ -1,21 +1,40 @@
 # TinyAgent
 
-A personal hobby project for building various agentic applications. Designed with a **keep-it-simple** philosophy — currently supports Google GenAI, Vertex AI, and Ollama only.
+A personal hobby project for building various agentic applications. Designed with a **keep-it-simple** philosophy — currently only supports:
+
+- [Google GenAI SDK](https://github.com/googleapis/python-genai) (including Vertex AI)
+- [Ollama](https://github.com/ollama/ollama)
 
 Whether it will be expanded in the future? We'll see. No promises.
 
 ---
 
-## Environment Setup
+## Table of Contents
 
-Create a `.env` file under the `apps/` directory (or set the environment variables listed in `apps/env_sample` by other means). See `apps/env_sample` for the full list of required variables.
-
-- `TAVILY_API_KEY_0` is **required** at minimum.
-- You can register multiple Tavily API keys — just number them starting from `0` (e.g. `TAVILY_API_KEY_0`, `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).
+- [Environment Setup](#environment-setup)
+- [Apps](#apps)
+- [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
+- [Star History](#star-history)
+- [License](#license)
 
 ---
 
-### Build and local deploy
+## Environment Setup
+
+Copy `apps/env_sample` to `apps/.env` and fill in your values:
+
+```bash
+cp apps/env_sample apps/.env
+```
+
+This configures **Vertex AI / Google GenAI** (`GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_AI_STUDIO_API_KEY`) and **Tavily** API keys.
+
+- `TAVILY_API_KEY_0` is **required** at minimum.
+- You can register multiple Tavily API keys — number them starting from `0` (e.g. `TAVILY_API_KEY_0`, `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).
+
+---
+
+### 🚀 Build and local deploy
 
 ```bash
 docker compose build
@@ -28,7 +47,7 @@ docker compose up -d
 docker exec -it TinyAgentDev /bin/bash
 ```
 
-### Logging
+### 📋 Logging
 
 ```bash
 docker logs -f TinyAgentDev
@@ -36,21 +55,19 @@ docker logs -f TinyAgentDev
 
 ---
 
-## Run Apps (inside container)
+## Apps
 
-Enter the container first, then navigate to the corresponding app directory to run.
+| App | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
+|-----|-------------|-----------------|-----------------|
+| `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output` | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks` |
+| `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks` | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks` |
 
-### Single Tavily Search Agent
+- `--output` (required): Output directory for results.
+- `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
+- **Inside container**: Enter with `docker exec -it TinyAgentDev /bin/bash` first.
+- **From host**: CLI scripts handle Google Cloud ADC authentication and resolve `--output`/`--tasks` paths relative to your current directory automatically.
 
-```bash
-cd apps/single-tavily-search-agent
-python ./agent.py --output ./agent-output
-```
-
-- `--output` (required): Output directory for results
-- `--tasks` (optional): Directory containing task files (`.md`). Defaults to `./tasks/` in the app folder.
-
-#### Example: Using `--tasks` with Custom Task Files
+### Example: Using `--tasks` with Custom Task Files
 
 You can organize research tasks in separate `.md` files. Each file contains prompts that guide the agent's research focus.
 
@@ -89,40 +106,18 @@ Compare Labubu and Hello Kitty from multiple perspectives:
 
 **Run with custom tasks:**
 ```bash
+# Inside container
 python ./agent.py --output ./my-output --tasks /path/to/labubuVShellokitty
-```
 
-### Deep Research Multi-Agents Tool (Tavily Search)
-
-```bash
-cd apps/deep-research-multi-agents-tool-tavily-search
-python ./deep-research.py --output ./deep-research-output
-```
-
-- `--output` (required): Output directory for results
-- `--tasks` (optional): Directory containing task files (`.md`). **Defaults** to `./tasks/` in the app folder 🔥 in container.
-
----
-
-## Run from Host (outside container)
-
-You can also run the apps directly from your host machine using the CLI scripts in `CLIs/`. These scripts handle Google Cloud ADC authentication, resolve `--output`/`--tasks` paths relative to your current directory, and run the app inside Docker automatically.
-
-### Single Tavily Search Agent
-
-```bash
-/path/to/CLIs/single-tavily-search-agent.sh --output ./my-output [--tasks ./my-tasks]
-```
-
-### Deep Research Multi-Agents Tool (Tavily Search)
-
-```bash
-/path/to/CLIs/deep-research-multi-agents-tool-tavily-search.sh --output ./my-output [--tasks ./my-tasks]
+# From host
+CLIs/single-tavily-search-agent.sh --output ./my-output --tasks ./labubuVShellokitty
 ```
 
 ---
 
-## Troubleshooting: Google Cloud Credentials
+## Troubleshooting: Google GenAI Credentials
+
+This section applies when using **Google GenAI / Vertex AI** (not Ollama).
 
 If you encounter `DefaultCredentialsError` or any credential-related error during execution:
 
@@ -132,7 +127,7 @@ If you encounter `DefaultCredentialsError` or any credential-related error durin
   ```
   Follow the prompts to complete the authentication flow.
 
-- **From host (via `CLIs/*.sh`)**: The CLI scripts will automatically detect missing or expired credentials and guide you through `gcloud auth application-default login` before running the app.
+- **From host (via `CLIs/*.sh`)**: The CLI scripts will automatically detect missing or expired credentials and trigger `gcloud auth application-default login`. This will open a **web browser login dialog** — complete the authentication in the browser, then the script will continue automatically.
 
 ---
 

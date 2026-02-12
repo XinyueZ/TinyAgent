@@ -1,4 +1,4 @@
-GOOGLE_CLOUD_PROJECT=asdf-a10asdf
+GOOGLE_CLOUD_PROJECT=asdf-a10asdf # GCP project-id, NOT project number
 GOOGLE_CLOUD_LOCATION=europe-west4 
 GOOGLE_GENAI_USE_VERTEXAI=True # True or False
 GOOGLE_AI_STUDIO_API_KEY=asdf
@@ -9,11 +9,4 @@ VERBOSE=2
 # tavily-python is required
 TAVILY_API_KEY_0=tvly-dev-asdf
 TAVILY_API_KEY_1=tvly-dev-asdf
-TAVILY_API_KEY_2=tvly-dev-asdf
-TAVILY_API_KEY_3=tvly-dev-asdf
-TAVILY_API_KEY_4=tvly-dev-asdf
-TAVILY_API_KEY_5=tvly-dev-asdf
-TAVILY_API_KEY_6=tvly-dev-asdf
-TAVILY_API_KEY_7=tvly-dev-asdf
-TAVILY_API_KEY_8=tvly-dev-asdf
-TAVILY_API_KEY_9=tvly-dev-asdf
+TAVILY_API_KEY_2=tvly-dev-asdf 

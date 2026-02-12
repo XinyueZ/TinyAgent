@@ -1,11 +1,7 @@
-import os
-from typing import Literal
-
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
 from pydantic import BaseModel, Field
-from tavily import TavilyClient
 
 
 class Summary(BaseModel):
@@ -17,23 +13,25 @@ class Summary(BaseModel):
     )
 
 
-class TavilySearch:
-    """A class to perform Tavily search with content summarization."""
+class BaseWebSearch:
+    """Base search class for web search classes."""
 
     def __init__(
         self,
-        api_key: str = None,
-        summarize_model: str = None,
+        summarize_model: str,
         vertexai: bool = True,
         vertexai_project: str = None,
         vertexai_location: str = None,
         google_ai_studio_api_key=None,
+        http_options: types.HttpOptions = types.HttpOptions(
+            retry_options=types.HttpRetryOptions(attempts=3),
+        ),
         **kwargs,
     ):
         """Initialize TavilySearch with API key.
 
         Args:
-            api_key: Tavily API key. If None, uses TAVILY_API_KEY from environment.
+
             summarize_model: Model to use for summarization. If None, uses GEMINI_MODEL from environment.
             vertexai: Whether to use Vertex AI. If None, uses GOOGLE_GENAI_USE_VERTEXAI from environment.
             vertexai_project: Vertex AI project. If None, uses GOOGLE_CLOUD_PROJECT from environment.
@@ -41,11 +39,6 @@ class TavilySearch:
             google_ai_studio_api_key: Google AI Studio API key. If None, uses GOOGLE_AI_STUDIO_API_KEY from environment.
             **kwargs: Additional keyword arguments to model config.
         """
-        if not api_key or not summarize_model:
-            raise ValueError("api_key and summarize_model must be provided")
-        self.api_key = api_key
-        self.summarize_model = summarize_model
-
         if vertexai and not (vertexai_project and vertexai_location):
             raise ValueError(
                 "vertexai_project and vertexai_location must be provided when vertexai is True"
@@ -54,36 +47,51 @@ class TavilySearch:
             raise ValueError(
                 "google_ai_studio_api_key must be provided when vertexai is False"
             )
-        self.vertexai = vertexai
-        self.vertexai_project = vertexai_project
-        self.vertexai_location = vertexai_location
-        self.google_ai_studio_api_key = google_ai_studio_api_key
+        if not summarize_model:
+            raise ValueError("summarize_model must be provided")
 
-        self.tavily_client = TavilyClient(api_key=self.api_key)
-        self.genai_client = genai.Client(
+        self.summarize_model = summarize_model
+        self.summarize_genai_client = self._create_genai_client(
+            summarize_model,
+            vertexai,
+            vertexai_project,
+            vertexai_location,
+            google_ai_studio_api_key,
+        )
+        self.summarize_model_config = types.GenerateContentConfig(
+            **{
+                **{
+                    "http_options": http_options,
+                    "response_mime_type": "application/json",
+                    "response_schema": Summary,
+                },
+                **kwargs,
+            }
+        )
+
+    @classmethod
+    def _create_genai_client(
+        cls,
+        model: str,
+        vertexai: bool = True,
+        vertexai_project: str = None,
+        vertexai_location: str = None,
+        google_ai_studio_api_key=None,
+    ) -> genai.Client:
+        return genai.Client(
             **(
                 {
-                    "vertexai": self.vertexai,
-                    "project": self.vertexai_project,
+                    "vertexai": vertexai,
+                    "project": vertexai_project,
                     "location": (
-                        "global"
-                        if "-preview" in self.summarize_model
-                        else self.vertexai_location
+                        "global" if "-preview" in model else vertexai_location
                     ),
                 }
-                if self.vertexai
+                if vertexai
                 else {
-                    "api_key": self.google_ai_studio_api_key,
+                    "api_key": google_ai_studio_api_key,
                 }
-            ),
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(attempts=3),
-            ),
-        )
-        self.config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=Summary,
-            **kwargs,
+            )
         )
 
     def _summarize_web_content(self, webpage_content: str) -> str:
@@ -152,10 +160,10 @@ Example 2 (for a scientific article):
 
 Remember, your goal is to create a summary that can be easily understood and utilized by a downstream research agent while preserving the most critical information from the original webpage."""
 
-            response = self.genai_client.models.generate_content(
+            response = self.summarize_genai_client.models.generate_content(
                 model=self.summarize_model,
                 contents=prompt.format(webpage_content=webpage_content),
-                config=self.config,
+                config=self.summarize_model_config,
             )
             summary = response.parsed
             formatted_summary = (
@@ -171,123 +179,3 @@ Remember, your goal is to create a summary that can be easily understood and uti
                 if len(webpage_content) > 1000
                 else webpage_content
             )
-
-    def _search_multiple(
-        self,
-        search_queries: list[str],
-        max_results: int = 3,
-        topic: Literal["general", "news", "finance"] = "general",
-        include_raw_content: bool = True,
-    ) -> list[dict]:
-        """Perform search using Tavily API for multiple queries.
-
-        Args:
-            search_queries: List of search queries to execute
-            max_results: Maximum number of results per query
-            topic: Topic filter for search results
-            include_raw_content: Whether to include raw webpage content
-
-        Returns:
-            List of search result dictionaries
-        """
-        search_docs = []
-        for query in search_queries:
-            result = self.tavily_client.search(
-                query,
-                max_results=max_results,
-                include_raw_content=include_raw_content,
-                topic=topic,
-            )
-            search_docs.append(result)
-
-        return search_docs
-
-    def _deduplicate_search_results(self, search_results: list[dict]) -> dict:
-        """Deduplicate search results by URL to avoid processing duplicate content.
-
-        Args:
-            search_results: List of search result dictionaries
-
-        Returns:
-            Dictionary mapping URLs to unique results
-        """
-        unique_results = {}
-
-        for response in search_results:
-            for result in response["results"]:
-                url = result["url"]
-                if url not in unique_results:
-                    unique_results[url] = result
-
-        return unique_results
-
-    def _process_search_results(self, unique_results: dict) -> dict:
-        """Process search results by summarizing content where available.
-
-        Args:
-            unique_results: Dictionary of unique search results
-
-        Returns:
-            Dictionary of processed results with summaries
-        """
-        summarized_results = {}
-
-        for url, result in unique_results.items():
-            if not result.get("raw_content"):
-                content = result["content"]
-            else:
-                content = self._summarize_web_content(result["raw_content"])
-
-            summarized_results[url] = {"title": result["title"], "content": content}
-
-        return summarized_results
-
-    def _format_output(self, summarized_results: dict) -> str:
-        """Format search results for output.
-
-        Args:
-            summarized_results: Dictionary of processed results
-
-        Returns:
-            Formatted string of search results
-        """
-        if not summarized_results:
-            return "No results or findings."
-        formatted_output = "Search results: \n\n"
-        for i, (url, result) in enumerate(summarized_results.items(), 1):
-            formatted_output += f"\n\n--- SOURCE {i}: {result['title']} ---\n"
-            formatted_output += f"URL: {url}\n\n"
-            formatted_output += f"SUMMARY:\n{result['content']}\n\n"
-            formatted_output += "-" * 80 + "\n"
-        return formatted_output
-
-    def __call__(
-        self,
-        query: str,
-        max_results: int = 3,
-        topic: Literal["general", "news", "finance"] = "general",
-        **kwargs,
-    ) -> str:
-        """Fetch results from Tavily search API with content summarization.
-
-        Args:
-            query: A single search query to execute
-            max_results: Maximum number of results to return
-            topic: Topic to filter results by ('general', 'news', 'finance')
-            **kwargs: A dict try to override the current model config.
-
-        Returns:
-            Formatted string of search results with summaries
-        """
-        if kwargs:
-            self.config = {**self.config, **kwargs}
-        search_results = self._search_multiple(
-            [query],
-            max_results=max_results,
-            topic=topic,
-            include_raw_content=True,
-        )
-        unique_results = self._deduplicate_search_results(search_results)
-        summarized_results = self._process_search_results(unique_results)
-
-        return self._format_output(summarized_results)

@@ -36,8 +36,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "${HOST_OUTPUT}" ]]; then
-    echo "Usage: $0 --output <output_dir> [--tasks <tasks_dir>]"
+if [[ -z "${HOST_OUTPUT}" || -z "${HOST_TASKS}" ]]; then
+    echo "Usage: $0 --output <output_dir> --tasks <tasks_dir>"
     exit 1
 fi
 

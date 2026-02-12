@@ -1,5 +1,6 @@
 # suppress the warning
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import os
@@ -7,7 +8,7 @@ from pathlib import Path
 import time
 
 from tiny_agent.tools.decorator import *
-from tiny_agent.utils.tavily_search import TavilySearch
+from tiny_agent.tools.web.tavily_search import TavilySearch
 from apps import (
     PROVIDER_CONFIG,
     SUMMARIZE_MODEL,

@@ -1,12 +1,13 @@
 # suppress the warning
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import os
 from pathlib import Path
 from tiny_agent.tools.decorator import *
 from tiny_agent.agent.tiny_agent import TinyAgent
-from tiny_agent.utils.tavily_search import TavilySearch
+from tiny_agent.tools.web.tavily_search import TavilySearch
 from apps import (
     PROVIDER_CONFIG,
     MAIN_AGENT_MODEL,
@@ -127,7 +128,7 @@ if __name__ == "__main__":
 
     if not task:
         raise ValueError("No tasks found")
-    
+
     # create the agent and run
     agent = TinyAgent(
         name="main_agent",
@@ -136,7 +137,7 @@ if __name__ == "__main__":
         tools=[web_search],
         **{**MAIN_AGENT_MODEL_CONFIG, **PROVIDER_CONFIG},
     )
-    
+
     agent(
         contents=get_main_agent_goal(
             task=task, output_path=f"{agent.output_location}/result.md"

@@ -80,6 +80,9 @@ class TinyAgent:
         vertexai_project: str = None,
         vertexai_location: str = None,
         google_ai_studio_api_key=None,
+        http_options: types.HttpOptions = types.HttpOptions(
+            retry_options=types.HttpRetryOptions(attempts=3),
+        ),
         **kwargs,
     ):
         """
@@ -135,9 +138,6 @@ class TinyAgent:
                     "api_key": self.google_ai_studio_api_key,
                 }
             ),
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(attempts=MAX_RETRY_ATTEMPTS),
-            ),
         )
         builtin_tools = [
             create_work_plan,
@@ -170,14 +170,19 @@ class TinyAgent:
             else:
                 self.tools.append(tool_func)
         self.config = types.GenerateContentConfig(
-            tools=self.tools,
-            system_instruction=system_instruction,
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                disable=False,
-                maximum_remote_calls=99999999,
-                ignore_call_history=False,
-            ),
-            **kwargs,
+            **{
+                **{
+                    "http_options": http_options,
+                    "tools": self.tools,
+                    "system_instruction": system_instruction,
+                    "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+                        disable=False,
+                        maximum_remote_calls=99999999,
+                        ignore_call_history=False,
+                    ),
+                },
+                **kwargs,
+            }
         )
 
     def _create_tool_copy(self, tool_func, agent_info: dict):
@@ -213,7 +218,9 @@ class TinyAgent:
             **kwargs: A dict try to override the current modelconfig.
         """
         if kwargs:
-            self.config = {**self.config, **kwargs}
+            self.config = types.GenerateContentConfig(
+                **{**self.config.model_dump(exclude_none=True), **kwargs}
+            )
 
         response = self.client.models.generate_content(
             model=self.model,
