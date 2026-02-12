@@ -13,6 +13,7 @@ Whether it will be expanded in the future? We'll see. No promises.
 
 - [Environment Setup](#environment-setup)
 - [Apps](#apps)
+  - [Run Examples](#run-examples)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
 - [License](#license)
