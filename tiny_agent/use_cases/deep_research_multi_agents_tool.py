@@ -96,19 +96,19 @@ class DeepResearchMultAgentsTool:
 
         if not main_agent_model:
             raise ValueError("main_agent_model is required")
-        if main_agent_model_config is None:
+        if not main_agent_model_config:
             raise ValueError("main_agent_model_config is required")
-        if main_provider is None:
+        if not main_provider:
             raise ValueError("main_provider is required")
         if not research_agent_model:
             raise ValueError("research_agent_model is required")
-        if research_agent_model_config is None:
+        if not research_agent_model_config:
             raise ValueError("research_agent_model_config is required")
-        if research_agent_provider is None:
+        if not research_agent_provider:
             raise ValueError("research_agent_provider is required")
         if not output_root:
             raise ValueError("output_root is required")
-        if research_tools is None:
+        if not research_tools:
             raise ValueError("research_tools is required")
 
         self.research_tools = research_tools
