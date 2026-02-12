@@ -16,6 +16,7 @@ Whether it will be expanded in the future? We'll see. No promises.
   - [Run Examples](#run-examples)
   - [🛠️ Developing Apps](#developing-apps)
 - [⚡ Agent Design & Performance](#agent-design-performance)
+- [📦 Tools](#tools)
 - [Agent Output Artifacts](#agent-output-artifacts)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
@@ -181,7 +182,7 @@ cd labubuVShellokitty
 
 ### 🛠️ Developing Apps
 
-All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. Also note the coupling described in [Tools](#tools): some tools (e.g. `tiny_agent/tools/web/tools.py`) import these shared constants from `apps/__init__.py`, which is one reason new apps are typically developed under `apps/` within this repo. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
 
 
 <a id="agent-design-performance"></a>
@@ -203,9 +204,27 @@ In this case study, the **deep research** pattern is generally **better** than a
 
 > Personal note: in this repo, the deep-research multi-agent workflow runs **concurrently via multithreading**, and that is likely a big part of why it performs better in practice.
 
+> **⚠️ Warning**
+>
+> The current deep-research apps rely on **random task decomposition** (randomly splitting the task into topics/subtopics). As a result, each run can produce different intermediate topics and the overall output quality/performance can vary from run to run.
+
 🎥 YouTube walkthrough (click the preview):
 
 [![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/CD8jUp_YXtw)
+
+
+<a id="tools"></a>
+
+## 📦 Tools
+
+Tools are the callable capabilities exposed to agents. In this repo there are two main categories:
+
+Note: tools may import shared configuration constants from `apps/__init__.py` (e.g. model names and provider config). This is one reason app development is coupled with the repo's library code, and why new apps are typically developed under the `apps/` directory.
+
+| Category | What it provides | Source files |
+|----------|------------------|-------------|
+| **Built-in tools** | Local filesystem read/write helpers, datetime helpers, and the agent's on-disk artifacts helpers (work plan, memory, reflection). | `tiny_agent/tools/buildin_tools.py` (plus shared wiring in `tiny_agent/tools/decorator.py`) |
+| **Web tools** | Web search and retrieval tools.<br><br>**Tavily search**: requires `TAVILY_API_KEY_0` at minimum (optionally `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).<br><br>**Google search**: uses the Google GenAI SDK and follows the same auth/config described above (Vertex AI vs Google AI Studio via `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_AI_STUDIO_API_KEY`). | `tiny_agent/tools/web/` (`__init__.py`, `tavily_search.py`, `google_search.py`, `base_web_search.py`, `tools.py`) |
 
 ---
 

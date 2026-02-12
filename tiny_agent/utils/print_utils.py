@@ -50,6 +50,7 @@ def format_text(
                 formatted_text,
                 title=f"[bold green]{title}[/bold green]",
                 border_style=border_style,
+                width=console.width,
                 padding=(1, 2),
             )
         )

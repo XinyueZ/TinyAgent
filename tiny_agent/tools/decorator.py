@@ -75,7 +75,7 @@ def default_tool_extra_fun(
     if int(os.getenv("VERBOSE", "0")) > 1:
         format_text(
             format_str,
-            "🤖 {agent} 🛠️  {func_name_to_decorate} 🗓️  Interactions".format(
+            "[Agent] {agent} | [Tool] {func_name_to_decorate} | Interactions".format(
                 agent=agent_info["agent_name"],
                 func_name_to_decorate=func_name_to_decorate,
             ),
