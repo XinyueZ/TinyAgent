@@ -29,6 +29,21 @@ cp apps/env_sample apps/.env
 
 This configures **Vertex AI / Google GenAI** (`GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_AI_STUDIO_API_KEY`) and **Tavily** API keys.
 
+### Google GenAI: Vertex AI vs Google AI Studio (Mutually Exclusive)
+
+For Google models, you can choose **exactly one** of the following authentication modes:
+
+- **Vertex AI (recommended for GCP users)**
+  - Set `GOOGLE_GENAI_USE_VERTEXAI=true`
+  - Set `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`
+  - Authenticate via ADC (see the troubleshooting section below)
+
+- **Google AI Studio API Key**
+  - Set `GOOGLE_GENAI_USE_VERTEXAI=false`
+  - Set `GOOGLE_AI_STUDIO_API_KEY`
+
+These two modes are **mutually exclusive**: when `GOOGLE_GENAI_USE_VERTEXAI=true`, the AI Studio API key will not be used.
+
 - `TAVILY_API_KEY_0` is **required** at minimum.
 - You can register multiple Tavily API keys — number them starting from `0` (e.g. `TAVILY_API_KEY_0`, `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).
 
@@ -59,15 +74,43 @@ docker logs -f TinyAgentDev
 
 | App | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
 |-----|-------------|-----------------|-----------------|
-| `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output` | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks` |
-| `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks` | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks` |
+| `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 
 - `--output` (required): Output directory for results.
 - `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
 - **Inside container**: Enter with `docker exec -it TinyAgentDev /bin/bash` first.
 - **From host**: CLI scripts handle Google Cloud ADC authentication and resolve `--output`/`--tasks` paths relative to your current directory automatically.
 
-### Example: Using `--tasks` with Custom Task Files
+### Model & Provider Configuration
+
+All model names, model options, and provider settings are centralized in `apps/__init__.py`:
+
+```python
+# Provider (Vertex AI vs Google AI Studio — mutually exclusive)
+PROVIDER_CONFIG = {
+    "vertexai": bool(os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", True)),
+    "vertexai_location": os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west4"),
+    "vertexai_project": os.environ.get("GOOGLE_CLOUD_PROJECT", "<your-project-id>"),
+    "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
+}
+
+# Main agent (e.g. orchestrator / deep-research planner)
+MAIN_AGENT_MODEL = "gemini-3-flash-preview"
+MAIN_AGENT_MODEL_CONFIG = { "temperature": 1.0, "seed": 42, ... }
+
+# Research sub-agent
+RESEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+RESEARCH_AGENT_MODEL_CONFIG = { "temperature": 1.0, "seed": 42, ... }
+
+# Summarization (web search results, etc.)
+SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+SUMMARIZE_MODEL_CONFIG = { "temperature": 0.0, "seed": 42, ... }
+```
+
+To customize, edit `apps/__init__.py` directly — all apps import their configuration from there.
+
+### Run Examples
 
 You can organize research tasks in separate `.md` files. Each file contains prompts that guide the agent's research focus.
 
@@ -104,13 +147,30 @@ Compare Labubu and Hello Kitty from multiple perspectives:
 - Popularity and cultural impact among young consumers
 ```
 
-**Run with custom tasks:**
-```bash
-# Inside container
-python ./agent.py --output ./my-output --tasks /path/to/labubuVShellokitty
+#### Run Inside Container
 
-# From host
-CLIs/single-tavily-search-agent.sh --output ./my-output --tasks ./labubuVShellokitty
+```bash
+docker exec -it TinyAgentDev /bin/bash
+
+# Single agent
+cd apps/single-tavily-search-agent
+python ./agent.py --output ./agent-output --tasks /path/to/labubuVShellokitty
+
+# Deep research
+cd apps/deep-research-multi-agents-tool-tavily-search
+python ./deep-research.py --output ./deep-research-output --tasks /path/to/labubuVShellokitty
+```
+
+#### Run From Host
+
+```bash
+cd labubuVShellokitty
+
+# Deep research
+.../TinyAgent/CLIs/deep-research-multi-agents-tool-tavily-search.sh --output deep-research-multi-agents-tool-tavily-search --tasks .
+
+# Or single agent
+.../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
 ```
 
 ---
