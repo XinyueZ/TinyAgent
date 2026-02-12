@@ -14,7 +14,7 @@ Whether it will be expanded in the future? We'll see. No promises.
 - [Environment Setup](#environment-setup)
 - [Apps](#apps)
   - [Run Examples](#run-examples)
-  - [Developing Apps](#developing-apps)
+  - [🛠️ Developing Apps](#developing-apps)
 - [Agent Output Artifacts](#agent-output-artifacts)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
@@ -176,7 +176,9 @@ cd labubuVShellokitty
 .../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
 ```
 
-### Developing Apps
+<a id="developing-apps"></a>
+
+### 🛠️ Developing Apps
 
 All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
 
@@ -188,10 +190,16 @@ During execution, agents produce several files in the `--output` directory. Thes
 
 | File | Description | Read/Write Pattern |
 |------|-------------|--------------------|
-| `work_plan.md` | The agent's structured work plan (i.e. todo list). Created at the start of a task and updated as the agent progresses through sub-tasks. | Created via `create_work_plan`, read via `read_work_plan`, updated via `update_work_plan` |
+| `work_plan.md` | The agent's structured work plan (a.k.a. todo list). Created at the start of a task and updated as the agent progresses through sub-tasks. | Created via `create_work_plan`, read via `read_work_plan`, updated via `update_work_plan` |
 | `memory.md` | Accumulated execution context and key findings. The agent appends entries as it discovers new information, acting as a persistent scratchpad across steps. | Read via `read_memory`, appended via `update_memory` |
 | `reflection.md` | The agent's self-reflection and decision-making reasoning. Captures why certain choices were made and lessons learned during execution. | Appended via `reflect` |
 | `result.md` | The final research output or deliverable. Contains the synthesized answer or report produced by the agent for the given task. | Written by the agent at the end of execution |
+
+> **⚠️ Warning**
+>
+> - The file names listed above are **sensitive** — they are hardcoded in the agent's built-in tools. Do not rename them.
+> - Each agent writes to its own `output_location` directory (pattern: `<--output>/<agent-name>-<agent-id>/`). To locate a specific artifact, use `output_location` + the file name (e.g. `output_location/result.md`). See how `output_path` is constructed in `apps/single-tavily-search-agent/agent.py` and `tiny_agent/use_cases/deep_research_multi_agents_tool.py` for reference.
+> - **Not all files are guaranteed to appear.** Different models have varying performance — if an agent fails or the model does not follow the expected tool-calling pattern, some artifacts (e.g. `work_plan.md`, `reflection.md`) may be missing from the output.
 
 ---
 
