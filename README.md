@@ -15,6 +15,7 @@ Whether it will be expanded in the future? We'll see. No promises.
 - [Apps](#apps)
   - [Run Examples](#run-examples)
   - [🛠️ Developing Apps](#developing-apps)
+- [⚡ Agent Design & Performance](#agent-design-performance)
 - [Agent Output Artifacts](#agent-output-artifacts)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
@@ -181,6 +182,30 @@ cd labubuVShellokitty
 ### 🛠️ Developing Apps
 
 All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+
+
+<a id="agent-design-performance"></a>
+
+## ⚡ Agent Design & Performance
+
+### Case Study: Single Agent vs Deep Research (Multi-Agent, Tool-Driven)
+
+This repo currently includes two representative design patterns:
+
+- `apps/single-tavily-search-agent`: a single agent that iterates on a task and uses Tavily search.
+- `apps/deep-research-multi-agents-tool-tavily-search`: a tool-driven deep-research workflow that spawns multiple agents concurrently.
+
+In this case study, the **deep research** pattern is generally **better** than a single-agent loop:
+
+- **Coverage**: parallel sub-agents can explore different angles and sources.
+- **Speed**: concurrency reduces wall-clock time for wide research.
+- **Robustness**: even if one sub-agent underperforms, the overall result can still be strong.
+
+> Personal note: in this repo, the deep-research multi-agent workflow runs **concurrently via multithreading**, and that is likely a big part of why it performs better in practice.
+
+🎥 YouTube walkthrough (click the preview):
+
+[![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/CD8jUp_YXtw)
 
 ---
 
