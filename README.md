@@ -223,14 +223,14 @@ Note: tools may import shared configuration constants from `apps/__init__.py` (e
 
 | Category | What it provides | Source files |
 |----------|------------------|-------------|
-| **Built-in tools** | Local filesystem read/write helpers, datetime helpers, and the agent's on-disk artifacts helpers (work plan, memory, reflection). | `tiny_agent/tools/buildin_tools.py` (plus shared wiring in `tiny_agent/tools/decorator.py`) |
+| **Built-in tools** | Local filesystem read/write helpers, datetime helpers, and the agent's on-disk artifacts helpers (work plan, memory, reflection). | `tiny_agent/tools/buildins/core.py` (work plan, memory, reflection), `tiny_agent/tools/buildins/filesys.py` (file read/write/append/exists, list dir), `tiny_agent/tools/buildins/utils.py` (datetime helpers), plus shared wiring in `tiny_agent/tools/decorator.py` |
 | **Web tools** | Web search and retrieval tools.<br><br>**Tavily search**: requires `TAVILY_API_KEY_0` at minimum (optionally `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).<br><br>**Google search**: uses the Google GenAI SDK and follows the same auth/config described above (Vertex AI vs Google AI Studio via `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_AI_STUDIO_API_KEY`). | `tiny_agent/tools/web/` (`__init__.py`, `tavily_search.py`, `google_search.py`, `base_web_search.py`, `tools.py`) |
 
 ---
 
 ## Agent Output Artifacts
 
-During execution, agents produce several files in the `--output` directory. These artifacts serve as the agent's "memory" and reasoning trace. All tools are defined in `tiny_agent/tools/buildin_tools.py`.
+During execution, agents produce several files in the `--output` directory. These artifacts serve as the agent's "memory" and reasoning trace. The agentic tools are defined in `tiny_agent/tools/buildins/core.py`, filesystem tools in `tiny_agent/tools/buildins/filesys.py`, and datetime tools in `tiny_agent/tools/buildins/utils.py`.
 
 | File | Description | Read/Write Pattern |
 |------|-------------|--------------------|
