@@ -1,4 +1,6 @@
-# TinyAgent
+<p align="center">
+  <img src="media/logo.png" alt="TinyAgent Logo" width="200" />
+</p>
 
 A personal hobby project for building various agentic applications. The whole point is to make it easy to spin up new agentic apps, so the agent components are built from scratch — implemented wherever I feel the need during development, rather than chasing excessive code reuse or textbook "design patterns". Designed with a **keep-it-simple** philosophy — currently only supports:
 
