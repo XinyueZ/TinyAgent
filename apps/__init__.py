@@ -14,30 +14,6 @@ PROVIDER_CONFIG = {
     "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
 }
 
-MAIN_AGENT_MODEL = "gemini-3-flash-preview"
-MAIN_AGENT_MODEL_CONFIG = {
-    "temperature": 1.0,
-    "seed": 42,
-    "top_p": 1.0,
-    "top_k": 60,
-    "thinking_config": types.ThinkingConfig(
-        thinking_level=types.ThinkingLevel.HIGH,
-        include_thoughts=False,
-    ),
-}
-
-RESEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
-RESEARCH_AGENT_MODEL_CONFIG = {
-    "temperature": 1.0,
-    "seed": 42,
-    "top_p": 1.0,
-    "top_k": 60,
-    "thinking_config": types.ThinkingConfig(
-        thinking_budget=-1,
-        include_thoughts=False,
-    ),
-}
-
 SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
 SEARCH_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,

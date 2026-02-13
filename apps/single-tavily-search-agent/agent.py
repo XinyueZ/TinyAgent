@@ -7,11 +7,32 @@ from pathlib import Path
 from tiny_agent.tools.decorator import *
 from tiny_agent.agent.tiny_agent import TinyAgent
 from tiny_agent.tools.web.tools import tavily_search, google_search
-from apps import (
-    PROVIDER_CONFIG,
-    MAIN_AGENT_MODEL,
-    MAIN_AGENT_MODEL_CONFIG,
-)
+
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+
+_PROVIDER_CONFIG = {
+    "vertexai": bool(os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", True)),
+    "vertexai_location": os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west4"),
+    "vertexai_project": os.environ.get(
+        "GOOGLE_CLOUD_PROJECT", "hg-hjghjg-ai-ft-exp-pr-hjjkhljhlhjkl"
+    ),
+    "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
+}
+
+_MAIN_AGENT_MODEL = "gemini-3-flash-preview"
+_MAIN_AGENT_MODEL_CONFIG = {
+    "temperature": 1.0,
+    "seed": 42,
+    "top_p": 1.0,
+    "top_k": 60,
+    "thinking_config": types.ThinkingConfig(
+        thinking_level=types.ThinkingLevel.HIGH,
+        include_thoughts=False,
+    ),
+}
 
 
 def get_main_agent_goal(task: str, output_path: str) -> str:
@@ -52,6 +73,7 @@ Save the report to a file with the path "{output_path}".
 
 # python ./agent.py --output ./agent-output --tasks tasks/
 if __name__ == "__main__":
+    print("Single Tavily Search Agent")
     import argparse
 
     parser = argparse.ArgumentParser(allow_abbrev=False)
@@ -91,10 +113,10 @@ if __name__ == "__main__":
     # create the agent and run
     agent = TinyAgent(
         name="main_agent",
-        model=MAIN_AGENT_MODEL,
+        model=_MAIN_AGENT_MODEL,
         output_root=args.output,
         tools=[tavily_search, google_search],
-        **{**MAIN_AGENT_MODEL_CONFIG, **PROVIDER_CONFIG},
+        **{**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
     )
 
     agent(

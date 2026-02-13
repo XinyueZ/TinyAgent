@@ -27,6 +27,7 @@ _PROVIDER_CONFIG = {
 }
 
 if __name__ == "__main__":
+    print("App Builder")
     import argparse
     from tiny_agent.agent.tiny_agent import TinyAgent
 

@@ -95,7 +95,7 @@ docker logs -f TinyAgentDev
 
 ### Model & Provider Configuration
 
-All model names, model options, and provider settings are centralized in `apps/__init__.py`:
+Each app defines its own model names, model options, and provider settings directly in its `.py` file. Shared settings (e.g. search/summarization models) are in `apps/__init__.py`, but the main agent config lives in each app so you can tune per-app without side effects.
 
 ```python
 # Provider (Vertex AI vs Google AI Studio — mutually exclusive)
@@ -106,20 +106,20 @@ PROVIDER_CONFIG = {
     "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
 }
 
-# Main agent (e.g. orchestrator / deep-research planner)
-MAIN_AGENT_MODEL = "gemini-3-flash-preview"
-MAIN_AGENT_MODEL_CONFIG = { "temperature": 1.0, "seed": 42, ... }
+# Search agent — used by web tools (see tiny_agent/tools/web/)
+SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+SEARCH_AGENT_MODEL_CONFIG = { "temperature": 1.0, "seed": 42, ... }
 
-# Research sub-agent
-RESEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
-RESEARCH_AGENT_MODEL_CONFIG = { "temperature": 1.0, "seed": 42, ... }
-
-# Summarization (web search results, etc.)
+# Summarization — used by web tools (see tiny_agent/tools/web/)
 SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
 SUMMARIZE_MODEL_CONFIG = { "temperature": 0.0, "seed": 42, ... }
 ```
 
-To customize, edit `apps/__init__.py` directly — all apps import their configuration from there.
+See the following files for examples of how to define these:
+- `apps/__init__.py` — shared search/summarization model config
+- `apps/single-tavily-search-agent/agent.py` — single-agent config
+- `apps/deep-research-multi-agents-tool-tavily-search/deep-research.py` — multi-agent config (main + research agents)
+- `apps/app-builder/app-builder.py` — app-builder agent config
 
 ### Run Examples
 
