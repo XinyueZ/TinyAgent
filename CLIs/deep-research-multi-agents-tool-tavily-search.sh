@@ -6,11 +6,20 @@
 #
 # --output and --tasks are resolved relative to the caller's working directory,
 # mounted into the container, and rewritten so the Python app writes to the right place.
+#
+# If Docker is not available (e.g. already inside a container), falls back to
+# running the Python entry-point directly.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# ── Fallback: no Docker → run directly (e.g. already inside a container) ──
+if ! command -v docker &>/dev/null; then
+    echo "[INFO] Docker not found. Running directly via Python."
+    exec python "${REPO_ROOT}/apps/deep-research-multi-agents-tool-tavily-search/deep-research.py" "$@"
+fi
 
 # Ensure Google Cloud Application Default Credentials (ADC) are valid
 ADC_FILE="${HOME}/.config/gcloud/application_default_credentials.json"
