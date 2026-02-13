@@ -13,7 +13,7 @@ from apps import (
 
 @tool()
 def tavily_search(query: str) -> str:
-    """One kind of internt search approach, perform a web search using Tavily Search.
+    """Perform a web search using Tavily Search.
 
     Args:
         query: The search query to execute.
