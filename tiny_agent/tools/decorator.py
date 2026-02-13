@@ -63,10 +63,10 @@ def default_tool_extra_fun(
         pass
 
     format_str = f"""
-{"## 📝 Work-plan" if len(work_plan) > 0 else ""}
+{"## Work-plan" if len(work_plan) > 0 else ""}
 {work_plan or ""}
 
-{"## 🗓️  Memory" if len(memory) > 0 else ""}
+{"## Memory" if len(memory) > 0 else ""}
 {memory or ""} 
 
 > caller_info: {caller_info}
