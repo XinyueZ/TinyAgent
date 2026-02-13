@@ -18,7 +18,7 @@ from tiny_agent.use_cases.deep_research_multi_agents_tool import (
 )
 
 
-# python ./deep-research.py --output ./deep-research-output
+# python ./deep-research.py --output ./deep-research-output --tasks tasks/
 if __name__ == "__main__":
     import argparse
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         type=str,
-        required=False,
+        required=True,
         help="The directory of tasks, md or txt files",
     )
     args = parser.parse_args()

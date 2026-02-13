@@ -50,7 +50,7 @@ Save the report to a file with the path "{output_path}".
 """
 
 
-# python ./agent.py --output ./agent-output
+# python ./agent.py --output ./agent-output --tasks tasks/
 if __name__ == "__main__":
     import argparse
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         type=str,
-        required=False,
+        required=True,
         help="The directory of tasks, md or txt files",
     )
     args = parser.parse_args()
