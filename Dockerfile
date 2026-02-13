@@ -9,6 +9,7 @@ LABEL description="TinyAgent - AI Research Agent"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV APP_BUILDER=/app/CLIs/app-builder.sh
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -37,6 +38,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+RUN chmod +x /app/CLIs/app-builder.sh
 
 # Default entrypoint
 ENTRYPOINT ["python"]

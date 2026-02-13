@@ -1,6 +1,6 @@
 # TinyAgent
 
-A personal hobby project for building various agentic applications. Designed with a **keep-it-simple** philosophy — currently only supports:
+A personal hobby project for building various agentic applications. The whole point is to make it easy to spin up new agentic apps, so the agent components are built from scratch — implemented wherever I feel the need during development, rather than chasing excessive code reuse or textbook "design patterns". Designed with a **keep-it-simple** philosophy — currently only supports:
 
 - [Google GenAI SDK](https://github.com/googleapis/python-genai) (including Vertex AI)
 - [Ollama](https://github.com/ollama/ollama)
@@ -14,7 +14,10 @@ Whether it will be expanded in the future? We'll see. No promises.
 - [Environment Setup](#environment-setup)
 - [Apps](#apps)
   - [Run Examples](#run-examples)
+    - [📝 Run Tasks](#run-tasks)
+    - [🏗️ Run App Builder](#run-app-builder)
   - [🛠️ Developing Apps](#developing-apps)
+  - [🏗️ App Builder](#app-builder)
 - [⚡ Agent Design & Performance](#agent-design-performance)
 - [📦 Tools](#tools)
 - [Agent Output Artifacts](#agent-output-artifacts)
@@ -81,6 +84,7 @@ docker logs -f TinyAgentDev
 |-----|-------------|-----------------|-----------------|
 | `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/app-builder` | Builds a CLI `.sh` script for any app given the path to its main file. Takes `--main` pointing to the app's entry-point `.py` file, reads its `argparse` definition, references existing `CLIs/*.sh` scripts, and generates a new matching `.sh` under `CLIs/`. 👍 The `CLIs/app-builder.sh` script itself was built by this app! | `cd apps/app-builder`<br>`python ./app-builder.py --main /path/to/apps/my-app/main.py`<br>[More ↓](#run-inside-container) | `CLIs/app-builder.sh`<br>`--main /path/to/apps/my-app/main.py`<br>[More ↓](#run-from-host) |
 
 - `--output` (required): Output directory for results.
 - `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
@@ -117,6 +121,10 @@ To customize, edit `apps/__init__.py` directly — all apps import their configu
 
 ### Run Examples
 
+<a id="run-tasks"></a>
+
+#### 📝 Run Tasks
+
 You can organize research tasks in separate `.md` files. Each file contains prompts that guide the agent's research focus.
 
 **Example directory structure:**
@@ -152,6 +160,28 @@ Compare Labubu and Hello Kitty from multiple perspectives:
 - Popularity and cultural impact among young consumers
 ```
 
+<a id="run-app-builder"></a>
+
+#### 🏗️ Run App Builder
+
+Create a new app directory under `apps/` with a Python entry-point. The app can have multiple `.py` files, but **only one main** (the file with `argparse` and the `if __name__ == "__main__"` block).
+
+**Example app structure:**
+```
+apps/my-new-app/
+├── my-new-app.py    ← main (only one per app)
+├── helper.py
+└── utils.py
+```
+
+Then generate its CLI shell script inside the container:
+
+```bash
+$APP_BUILDER --main apps/my-new-app/my-new-app.py
+```
+
+The generated `CLIs/my-new-app.sh` is ready to use immediately.
+
 #### Run Inside Container
 
 ```bash
@@ -164,6 +194,10 @@ python ./agent.py --output ./agent-output --tasks /path/to/labubuVShellokitty
 # Deep research
 cd apps/deep-research-multi-agents-tool-tavily-search
 python ./deep-research.py --output ./deep-research-output --tasks /path/to/labubuVShellokitty
+
+# App builder
+cd apps/app-builder
+python ./app-builder.py --main /path/to/apps/my-app/main.py
 ```
 
 #### Run From Host
@@ -176,6 +210,9 @@ cd labubuVShellokitty
 
 # Or single agent
 .../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
+
+# App builder
+.../TinyAgent/CLIs/app-builder.sh --main /path/to/apps/my-app/main.py
 ```
 
 <a id="developing-apps"></a>
@@ -183,6 +220,39 @@ cd labubuVShellokitty
 ### 🛠️ Developing Apps
 
 All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. Also note the coupling described in [Tools](#tools): some tools (e.g. `tiny_agent/tools/web/tools.py`) import these shared constants from `apps/__init__.py`, which is one reason new apps are typically developed under `apps/` within this repo. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+
+<a id="app-builder"></a>
+
+### 🏗️ App Builder
+
+The **App Builder** (`apps/app-builder`) is a meta-app — a single `TinyAgent` that builds CLI shell scripts for other apps.
+
+Every app in this repo follows a convention: a Python entry-point with `argparse`, a Docker Compose service, and a wrapper `.sh` script under `CLIs/` that handles host-side concerns (ADC authentication, path resolution, volume mounts). Writing these `.sh` scripts by hand is repetitive, so the App Builder automates it.
+
+**How it works:**
+
+1. You point it at an app's main `.py` file via `--main`.
+2. The agent reads all existing `CLIs/*.sh` scripts to learn the common structure and conventions.
+3. It reads the target file's `argparse` section to extract every argument — name, type, required/optional, and whether it represents a directory path, file path, or plain value.
+4. It generates a new `.sh` script that mirrors the reference scripts but adapts the argument handling to match the target app's `argparse` definition:
+   - **Directory paths** → resolved, mounted as Docker volumes.
+   - **File paths** → resolved, parent directory mounted as a Docker volume.
+   - **Plain values** → forwarded as-is.
+5. The generated script is saved to `CLIs/<parent-dir-name>.sh`, named after the target app's directory.
+
+This means publishing a new app to the CLI is as simple as running:
+
+```bash
+python apps/app-builder/app-builder.py --main apps/my-new-app/main.py
+```
+
+Inside the container, the environment variable `$APP_BUILDER` points to `/app/CLIs/app-builder.sh`, so you can also run:
+
+```bash
+$APP_BUILDER --main apps/my-new-app/main.py
+```
+
+> **Note:** If the image hasn't been rebuilt since adding the `chmod +x` step in the Dockerfile, you may need to run `chmod +x /app/CLIs/app-builder.sh` manually inside the container first.
 
 
 <a id="agent-design-performance"></a>
