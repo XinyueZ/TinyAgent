@@ -1,5 +1,7 @@
 import warnings
 
+from tiny_agent.utils.print_utils import format_text
+
 warnings.filterwarnings("ignore")
 
 from google.genai import types
@@ -40,18 +42,7 @@ if __name__ == "__main__":
         help="The the file where the main is. One app only one main. Recommended to use absolute path ‼️",
     )
     args = parser.parse_args()
-
-    # create the agent and run
-    agent = TinyAgent(
-        name="app_builder",
-        model=_APP_BUILDER_MODEL,
-        tools=[],
-        output_root="./build",
-        **{**_APP_BUILDER_MODEL_CONFIG, **_PROVIDER_CONFIG},
-    )
-
-    agent(
-        contents=f"""
+    task = f"""
 You are a CLI shell-script builder. Your goal is to create a new `.sh` file under the `CLIs/` directory for the application whose main entry-point is given below.
 
 ## Inputs
@@ -94,4 +85,13 @@ For example, if this file absolute path is `/aaa/bbb/apps/app-builder/app-builde
 main path: {args.main}
 
 """
+    format_text(task, "⚑ App Builder (single agent)")
+    # create the agent and run
+    agent = TinyAgent(
+        name="app_builder",
+        model=_APP_BUILDER_MODEL,
+        output_root="./build",
+        **{**_APP_BUILDER_MODEL_CONFIG, **_PROVIDER_CONFIG},
     )
+
+    agent(contents=task)

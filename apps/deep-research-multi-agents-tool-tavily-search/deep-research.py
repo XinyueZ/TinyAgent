@@ -1,18 +1,19 @@
 # suppress the warning
-from pickle import load
 import warnings
+from pickle import load
 
 warnings.filterwarnings("ignore")
-
 from pathlib import Path
+
+from dotenv import load_dotenv
+from google.genai import types
+
 from tiny_agent.tools.decorator import *
-from tiny_agent.tools.web.tools import tavily_search, google_search
+from tiny_agent.tools.web.tools import google_search, tavily_search
 from tiny_agent.use_cases.deep_research_multi_agents_tool import (
     DeepResearchMultAgentsTool,
 )
-
-from google.genai import types
-from dotenv import load_dotenv
+from tiny_agent.utils.print_utils import format_text
 
 load_dotenv()
 
@@ -51,7 +52,7 @@ _MAIN_AGENT_MODEL_CONFIG = {
 
 # python ./deep-research.py --output ./deep-research-output --tasks tasks/
 if __name__ == "__main__":
-    print("Deep Research Multi Agents Tool")
+    print("Deep Research Multi Agents by Tool")
     import argparse
 
     parser = argparse.ArgumentParser(allow_abbrev=False)
@@ -77,20 +78,24 @@ if __name__ == "__main__":
     )
 
     if args.tasks:
+        task_files = list(Path(args.tasks).glob("*.md")) + list(
+            Path(args.tasks).glob("*.txt")
+        )
         task = "\n\n".join(
             [
                 "## Task " + str(i) + ": " + open(file).read()
-                for i, file in enumerate(Path(args.tasks).glob("**/*.md"))
+                for i, file in enumerate(task_files)
             ]
         )
     else:
         # default tasks dir that at the same folder of this file
         tasks_dir = Path(__file__).parent / "tasks"
         if tasks_dir.exists():
+            task_files = list(tasks_dir.glob("*.md")) + list(tasks_dir.glob("*.txt"))
             task = "\n\n".join(
                 [
                     "## Task " + str(i) + ": " + open(file).read()
-                    for i, file in enumerate(tasks_dir.glob("**/*.md"))
+                    for i, file in enumerate(task_files)
                 ]
             )
         else:
@@ -98,5 +103,5 @@ if __name__ == "__main__":
 
     if not task:
         raise ValueError("No tasks found")
-
+    format_text(task, "⚑ Deep Research (multi agents by tool)")
     deep_research(task=task)

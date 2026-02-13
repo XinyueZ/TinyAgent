@@ -4,12 +4,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from pathlib import Path
-from tiny_agent.tools.decorator import *
-from tiny_agent.agent.tiny_agent import TinyAgent
-from tiny_agent.tools.web.tools import tavily_search, google_search
 
-from google.genai import types
 from dotenv import load_dotenv
+from google.genai import types
+
+from tiny_agent.agent.tiny_agent import TinyAgent
+from tiny_agent.tools.decorator import *
+from tiny_agent.tools.web.tools import google_search, tavily_search
+from tiny_agent.utils.print_utils import format_text
 
 load_dotenv()
 
@@ -73,7 +75,7 @@ Save the report to a file with the path "{output_path}".
 
 # python ./agent.py --output ./agent-output --tasks tasks/
 if __name__ == "__main__":
-    print("Single Tavily Search Agent")
+    print("Deep Research Single Agent")
     import argparse
 
     parser = argparse.ArgumentParser(allow_abbrev=False)
@@ -88,20 +90,24 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.tasks:
+        task_files = list(Path(args.tasks).glob("*.md")) + list(
+            Path(args.tasks).glob("*.txt")
+        )
         task = "\n\n".join(
             [
                 "## Task " + str(i) + ": " + open(file).read()
-                for i, file in enumerate(Path(args.tasks).glob("**/*.md"))
+                for i, file in enumerate(task_files)
             ]
         )
     else:
         # default tasks dir that at the same folder of this file
         tasks_dir = Path(__file__).parent / "tasks"
         if tasks_dir.exists():
+            task_files = list(tasks_dir.glob("*.md")) + list(tasks_dir.glob("*.txt"))
             task = "\n\n".join(
                 [
                     "## Task " + str(i) + ": " + open(file).read()
-                    for i, file in enumerate(tasks_dir.glob("**/*.md"))
+                    for i, file in enumerate(task_files)
                 ]
             )
         else:
@@ -119,8 +125,8 @@ if __name__ == "__main__":
         **{**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
     )
 
-    agent(
-        contents=get_main_agent_goal(
-            task=task, output_path=f"{agent.output_location}/result.md"
-        )
+    full_task = get_main_agent_goal(
+        task=task, output_path=f"{agent.output_location}/result.md"
     )
+    format_text(task, "⚑ Deep Research (single agent)")
+    agent(contents=full_task)

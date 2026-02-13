@@ -4,7 +4,6 @@ from google.genai import types
 
 load_dotenv()
 
-############## AI part ##############
 PROVIDER_CONFIG = {
     "vertexai": bool(os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", True)),
     "vertexai_location": os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west4"),
@@ -14,6 +13,7 @@ PROVIDER_CONFIG = {
     "google_ai_studio_api_key": os.environ.get("GOOGLE_AI_STUDIO_API_KEY", ""),
 }
 
+# For google search tool
 SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
 SEARCH_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,
@@ -26,6 +26,7 @@ SEARCH_AGENT_MODEL_CONFIG = {
     ),
 }
 
+# For all web search tools
 SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
 SUMMARIZE_MODEL_CONFIG = {
     "temperature": 0.0,
