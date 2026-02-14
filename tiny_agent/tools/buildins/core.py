@@ -12,16 +12,25 @@ def read_work_plan() -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         with open(f"{agent_output_location}/work_plan.md", "r") as f:
             work_plan = f.read()
-            format_text(work_plan, "Read Work-plan", "green")
+            format_text(work_plan, f"{agent_name}-{agent_id} | Read Work-plan", "green")
         return work_plan
     except FileNotFoundError:
+        format_text(
+            "**No work-plan has been created yet.",
+            f"{agent_name}-{agent_id} | Read Work-plan",
+            "yellow",
+        )
+        return "**No work-plan has been created yet."
+    except Exception as e:
         import traceback
 
         traceback.print_exc()
-        return "**No work-plan has been created yet."
+        return f"Failed to read work-plan. Error: {str(e)}"
 
 
 @tool()
@@ -36,11 +45,13 @@ def create_work_plan(work_plan: str) -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         Path(agent_output_location).mkdir(parents=True, exist_ok=True)
         with open(f"{agent_output_location}/work_plan.md", "w") as f:
             f.write(work_plan)
-            format_text(work_plan, "Create Work-plan", "red")
+            format_text(work_plan, f"{agent_name}-{agent_id} | Create Work-plan", "red")
         return f"""Work-plan created in file: {agent_output_location}/work_plan.md
 -----
 #### Work-plan
@@ -65,10 +76,14 @@ def update_work_plan(updated_work_plan: str) -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         with open(f"{agent_output_location}/work_plan.md", "w") as f:
             f.write(updated_work_plan)
-            format_text(updated_work_plan, "Update Work-plan", "red")
+            format_text(
+                updated_work_plan, f"{agent_name}-{agent_id} | Update Work-plan", "red"
+            )
         return f"Updated work-plan: {updated_work_plan}"
     except Exception as e:
         import traceback
@@ -89,12 +104,14 @@ def reflect(reflection: str) -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         Path(agent_output_location).mkdir(parents=True, exist_ok=True)
         with open(f"{agent_output_location}/reflection.md", "a") as f:
             f.write(reflection)
             f.write("\n")
-            format_text(reflection, "Reflect", "red")
+            format_text(reflection, f"{agent_name}-{agent_id} | Reflect", "red")
         return f"**Reflection recorded:**\n {reflection}\n"
     except Exception as e:
         import traceback
@@ -112,18 +129,21 @@ def read_memory() -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         with open(f"{agent_output_location}/memory.md", "r") as f:
             memory = f.read()
-            format_text(memory, "Read memory", "green")
+            format_text(memory, f"{agent_name}-{agent_id} | Read memory", "green")
         return memory
     except FileNotFoundError:
-        format_text("No memory has been created yet.", "Read memory", "yellow")
+        format_text(
+            "No memory has been created yet.",
+            f"{agent_name}-{agent_id} | Read memory",
+            "yellow",
+        )
         return "No memory has been created yet."
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
         return f"Failed to read memory. Error: {str(e)}"
 
 
@@ -139,12 +159,14 @@ def update_memory(entry: str) -> str:
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         Path(agent_output_location).mkdir(parents=True, exist_ok=True)
         with open(f"{agent_output_location}/memory.md", "a") as f:
             f.write(entry)
             f.write("\n")
-            format_text(entry, "Update memory", "red")
+            format_text(entry, f"{agent_name}-{agent_id} | Update memory", "red")
         return f"A new memory entry added: {entry}"
     except Exception as e:
         import traceback

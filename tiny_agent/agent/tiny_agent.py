@@ -1,30 +1,33 @@
-from functools import wraps
-from ..tools.decorator import _agent_info_context
-from typing import Any
+import time
 import uuid
+from functools import wraps
+from typing import Callable, Optional
+
 from google import genai
 from google.genai import types
-import time
+
 from ..tools.buildins.core import (
     create_work_plan,
-    update_work_plan,
-    read_work_plan,
-    update_memory,
     read_memory,
+    read_work_plan,
     reflect,
+    update_memory,
+    update_work_plan,
 )
 from ..tools.buildins.filesys import (
-    read_file,
-    write_file,
     append_to_file,
     file_exists,
     list_dir,
+    read_file,
+    write_file,
 )
+from ..tools.buildins.subagents_helper import transfer_to_subagent
 from ..tools.buildins.utils import (
-    get_current_datetime_in_utc,
     get_current_datetime_in_local,
+    get_current_datetime_in_utc,
 )
-
+from ..tools.decorator import _agent_info_context, tool
+from .agent_manager import AgentManager
 
 MAX_RETRY_ATTEMPTS = 5
 SYSTEM_INSTRUCTION = """
@@ -72,6 +75,16 @@ Complete task based on <instruction>.
 </execute-step-rule>
 """
 
+SUB_AGENTS_FOOTNOTE = """
+You have the following subagents that can help you:
+{subagents}
+Please **always** use the tool `transfer_to_subagent` to transfer the task to the sub-agent.
+You pass the name of the sub-agent and the task to the tool.
+**Always** use reflect to perform reflection for decision-making, before transferring the task to the sub-agent. When reflecting, always include:
+1. Why shall I transfer the task to certain sub-agent?
+2. Is the task description clear and complete? If not, an update the task description might be needed. 
+"""
+
 
 class TinyAgent:
     def __init__(
@@ -79,7 +92,8 @@ class TinyAgent:
         name: str,
         model: str,
         output_root: str,
-        tools: list[Any] = list(),
+        tools: list[Callable] = list(),
+        subagents: list["TinyAgent"] = list(),
         system_instruction: str = SYSTEM_INSTRUCTION,
         vertexai: bool = True,
         vertexai_project: str = None,
@@ -158,8 +172,9 @@ class TinyAgent:
             file_exists,
             get_current_datetime_in_utc,
             get_current_datetime_in_local,
+            transfer_to_subagent,
         ]
-        all_tools = builtin_tools + list(tools)
+        all_tools = self._append_tools(builtin_tools, tools)
         # Create independent copies of tools to avoid shared state in concurrent execution
         # Each TinyAgent gets its own copy with its own _agent_info
         self.tools = []
@@ -190,6 +205,21 @@ class TinyAgent:
                 **kwargs,
             }
         )
+        self.subagents = self._append_subagents(dict(), subagents)
+        AgentManager().register(self)
+
+    def _append_tools(
+        self, builtin_tools: list[Callable], upcoming_tools: list[Callable]
+    ) -> list[Callable]:
+        for t in upcoming_tools:
+            if not callable(t):
+                raise TypeError(f"{t} is not callable")
+            if not hasattr(t, "_agent_info"):
+                raise TypeError(
+                    f"{t.__name__ if hasattr(t, '__name__') else t} is not decorated by @tool() from tiny_agent.tools.decorator"
+                )
+
+        return builtin_tools + upcoming_tools
 
     def _create_tool_copy(self, tool_func, agent_info: dict):
         """Create an independent copy of a tool with its own agent_info.
@@ -216,7 +246,35 @@ class TinyAgent:
         tool_copy._agent_info = agent_info.copy()
         return tool_copy
 
-    def __call__(self, contents, **kwargs):
+    def _append_subagents(
+        self,
+        builtin_subagents: dict[str, "TinyAgent"],
+        upcoming_subagents: list["TinyAgent"],
+    ) -> dict[str, "TinyAgent"]:
+        for subagent in upcoming_subagents:
+            if not isinstance(subagent, TinyAgent):
+                raise TypeError(f"{subagent} is not a TinyAgent instance")
+            if not hasattr(subagent, "_is_async"):
+                raise TypeError(
+                    f"{subagent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
+                )
+            if subagent.name == self.name:
+                raise ValueError(
+                    f"Subagent name '{subagent.name}' cannot be the same as the parent agent name"
+                )
+        return {
+            **builtin_subagents,
+            **{subagent.name: subagent for subagent in upcoming_subagents},
+        }
+
+    def get_subagent_by_name(self, name: str) -> Optional["TinyAgent"]:
+        return self.subagents.get(name)
+
+    @property
+    def subagents_count(self) -> int:
+        return len(self.subagents)
+
+    def __call__(self, contents, **kwargs) -> types.GenerateContentResponse:
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
@@ -228,12 +286,16 @@ class TinyAgent:
                 **{**self.config.model_dump(exclude_none=True), **kwargs}
             )
 
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=f"""{contents}
+        prompt = f"""{contents}
            
 {INSTRUCTIONS}
-""",
+
+{SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
+""".strip()
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=prompt,
             config=self.config,
         )
         return response
