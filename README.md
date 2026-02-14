@@ -22,6 +22,7 @@ Whether it will be expanded in the future? We'll see. No promises.
   - [🏗️ App Builder](#app-builder)
 - [⚡ Agent Design & Performance](#agent-design-performance)
 - [📦 Tools](#tools)
+- [🤖 Sub-Agents](#sub-agents)
 - [Agent Output Artifacts](#agent-output-artifacts)
 - [Troubleshooting: Google GenAI Credentials](#troubleshooting-google-genai-credentials)
 - [Star History](#star-history)
@@ -297,6 +298,84 @@ Note: tools may import shared configuration constants from `apps/__init__.py` (e
 |----------|------------------|-------------|
 | **Built-in tools** | Local filesystem read/write helpers, datetime helpers, and the agent's on-disk artifacts helpers (work plan, memory, reflection). | `tiny_agent/tools/buildins/core.py` (work plan, memory, reflection), `tiny_agent/tools/buildins/filesys.py` (file read/write/append/exists, list dir), `tiny_agent/tools/buildins/utils.py` (datetime helpers), plus shared wiring in `tiny_agent/tools/decorator.py` |
 | **Web tools** | Web search and retrieval tools.<br><br>**Tavily search**: requires `TAVILY_API_KEY_0` at minimum (optionally `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).<br><br>**Google search**: uses the Google GenAI SDK and follows the same auth/config described above (Vertex AI vs Google AI Studio via `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_AI_STUDIO_API_KEY`). | `tiny_agent/tools/web/` (`__init__.py`, `tavily_search.py`, `google_search.py`, `base_web_search.py`, `tools.py`) |
+
+---
+
+<a id="sub-agents"></a>
+
+## 🤖 Sub-Agents
+
+Sub-agents are specialized `TinyAgent` instances that a parent agent can delegate tasks to. They are registered as children of a parent agent and invoked via built-in transfer tools during execution.
+
+### Defining a Sub-Agent
+
+Use the `@subagent` decorator on a `TinyAgent` subclass. The class docstring becomes the sub-agent's description (visible to the parent agent when deciding which sub-agent to use).
+
+```python
+from tiny_agent.subagent.decorator import subagent
+from tiny_agent.agent.tiny_agent import TinyAgent
+
+@subagent
+class AddAgent(TinyAgent):
+    """Perform addition (math)."""
+    ...
+
+@subagent(is_async=True)
+class ResearchAgent(TinyAgent):
+    """A research sub-agent that performs web searches."""
+    ...
+```
+
+- `@subagent` or `@subagent()` — marks a sync sub-agent.
+- `@subagent(is_async=True)` — marks an async sub-agent (required for parallel execution).
+
+### Registering Sub-Agents
+
+Pass sub-agent instances to the parent agent's `subagents` parameter:
+
+```python
+add_agent = AddAgent(name="add_agent", model="gemini-2.5-flash", ...)
+mul_agent = MulAgent(name="mul_agent", model="gemini-2.5-flash", ...)
+
+parent = TinyAgent(
+    name="main_agent",
+    model="gemini-2.5-flash",
+    subagents=[add_agent, mul_agent],
+    ...
+)
+```
+
+> **Note:** Sub-agent names must be unique and cannot match the parent agent's name.
+
+### Transfer Patterns
+
+The parent agent uses two built-in tools to delegate work to sub-agents:
+
+| Pattern | Tool | When to use |
+|---------|------|-------------|
+| **ONE-TO-ONE** | `transfer_to_subagent` | Transfer a task to a **single** sub-agent. Pass the sub-agent's name as a string. |
+| **ONE-TO-MANY** | `transfer_to_subagents` | Transfer a task to **multiple** sub-agents in parallel. Pass a list of sub-agent names. Only sub-agents with `is_async=True` can be used. |
+
+**ONE-TO-ONE** is for sequential delegation — the parent waits for the sub-agent to finish before continuing. **ONE-TO-MANY** runs all target sub-agents concurrently using threads (worker count is based on CPU cores) and returns a dict mapping each sub-agent name to its result.
+
+### Decision Flow
+
+The parent agent is instructed to reflect before every transfer:
+
+1. Do I need one sub-agent or multiple sub-agents for this task?
+2. If multiple, can they work in parallel, or do they depend on each other's results?
+   - **Parallel** → `transfer_to_subagents` (ONE-TO-MANY)
+   - **Sequential dependency** → `transfer_to_subagent` (ONE-TO-ONE), called one after another
+3. Why this particular sub-agent(s)?
+4. Is the task description clear and complete?
+
+### Source Files
+
+| File | Description |
+|------|-------------|
+| `tiny_agent/subagent/decorator.py` | `@subagent` decorator |
+| `tiny_agent/tools/buildins/subagents_helper.py` | `transfer_to_subagent` and `transfer_to_subagents` tools |
+| `tiny_agent/agent/agent_manager.py` | Singleton agent registry (enforces unique names) |
 
 ---
 
