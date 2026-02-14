@@ -26,6 +26,12 @@ class AgentManager:
 
     def register(self, tiny_agent: "TinyAgent") -> None:
         with self._agents_lock:
+            for existing in self._agents.values():
+                if existing.name == tiny_agent.name:
+                    raise ValueError(
+                        f"An agent with name '{tiny_agent.name}' is already registered "
+                        f"(agent_id: {existing.agent_id}). Agent names must be unique."
+                    )
             self._agents[tiny_agent.agent_id] = tiny_agent
 
     def unregister(self, agent_id: str) -> None:
