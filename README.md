@@ -356,6 +356,8 @@ Sub-agents are specialized `TinyAgent` instances that a parent agent can delegat
 
 Use the `@subagent` decorator on a `TinyAgent` subclass. The class docstring becomes the sub-agent's description (visible to the parent agent when deciding which sub-agent to use).
 
+So for sub-agents, the `TinyAgent` class docstring is **meaningful**: it is not just documentation, it is part of the routing signal the parent agent uses for delegation.
+
 ```python
 from tiny_agent.subagent.decorator import subagent
 from tiny_agent.agent.tiny_agent import TinyAgent
