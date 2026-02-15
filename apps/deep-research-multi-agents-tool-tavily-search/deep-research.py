@@ -104,4 +104,5 @@ if __name__ == "__main__":
     if not task:
         raise ValueError("No tasks found")
     format_text(task, "⚑ Deep Research (multi agents by tool)")
-    deep_research(task=task)
+    result = deep_research(task=task)
+    format_text(result.text, "❀ Deep Research (multi agents by tool) result")

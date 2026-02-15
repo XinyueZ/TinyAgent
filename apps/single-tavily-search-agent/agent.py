@@ -133,4 +133,5 @@ if __name__ == "__main__":
         task=task, output_path=f"{agent.output_location}/result.md"
     )
     format_text(task, "⚑ Deep Research (single agent)")
-    agent(contents=full_task)
+    result = agent(contents=full_task)
+    format_text(result.text, "❀ Deep Research (single agent) result")

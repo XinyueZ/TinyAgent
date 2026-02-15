@@ -223,7 +223,7 @@ class DeepResearchMultAgentsTool:
             raise ValueError("Text that describes a task is required")
 
         output_path = f"{self.main_agent.output_location}/result.md"
-        self.main_agent(
+        return self.main_agent(
             contents=_RESEARCH_LEADER_PROMPT.format(
                 task=task,
                 max_topics=f"{self._get_cpu_core_count()}",
