@@ -12,3 +12,5 @@ venv
 notebooks
 notebooks/
 .windsurf/ 
+*output/
+output/

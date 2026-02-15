@@ -66,10 +66,14 @@ Compose markdown content based on the recorded report including the following se
 - **Citations including URLs**: All sources referenced, organized by topic
 - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
 
+Output:
 At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
 Save the report to a file with the path "{output_path}".
 
-**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, stop working.
+**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, response to user..
+
+Response:
+Read out the final report file as the response to the user.
 """
 
 

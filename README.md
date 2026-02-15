@@ -14,6 +14,7 @@ Whether it will be expanded in the future? We'll see. No promises.
 ## Table of Contents
 
 - [Environment Setup](#environment-setup)
+- [Agent Use](#agent-use)
 - [Apps](#apps)
   - [Run Examples](#run-examples)
     - [📝 Run Tasks](#run-tasks)
@@ -78,6 +79,46 @@ docker exec -it TinyAgentDev /bin/bash
 ```bash
 docker logs -f TinyAgentDev
 ```
+
+---
+
+## Agent Use
+
+A minimal example showing how to create and run a `TinyAgent` (see [`apps/single-tavily-search-agent/agent.py`](apps/single-tavily-search-agent/agent.py) for a full working example):
+
+```python
+from tiny_agent.agent.tiny_agent import TinyAgent
+from tiny_agent.agent.agent_manager import AgentManager
+
+agent = TinyAgent(
+    name="my_agent",
+    model="gemini-2.5-flash",
+    output_root="./output",
+    tools=[...],            # list of tool functions
+    # subagents=[...],      # optional sub-agents
+    # Model options
+    temperature=1.0,
+    seed=42,
+    # Provider — pick one (mutually exclusive):
+    # Vertex AI
+    vertexai=True,
+    vertexai_project="<your-project-id>",
+    vertexai_location="europe-west4",
+    # Google AI Studio
+    # vertexai=False,
+    # google_ai_studio_api_key="<your-api-key>",
+)
+
+try:
+    result = agent(contents="Your task or question here")
+finally:
+    AgentManager().unregister(agent.agent_id)
+```
+
+- `tools` — a list of functions decorated with `@tool()` (see [Tools](#tools)).
+- `subagents` — optional list of sub-agent instances (see [Sub-Agents](#sub-agents)).
+- Wrap the agent call in `try/finally` and call `AgentManager().unregister(agent.agent_id)` to clean up the agent from the singleton registry after execution.
+- The agent writes artifacts (work plan, memory, reflection, result) to `<output_root>/<agent-name>-<agent-id>/` (see [Agent Output Artifacts](#agent-output-artifacts)).
 
 ---
 

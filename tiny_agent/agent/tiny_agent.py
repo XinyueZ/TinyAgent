@@ -21,12 +21,15 @@ from ..tools.buildins.filesys import (
     read_file,
     write_file,
 )
-from ..tools.buildins.subagents_helper import transfer_to_subagent
+from ..tools.buildins.subagents_helper import (
+    transfer_to_subagent,
+    transfer_to_subagents,
+)
 from ..tools.buildins.utils import (
     get_current_datetime_in_local,
     get_current_datetime_in_utc,
 )
-from ..tools.decorator import _agent_info_context, tool
+from ..tools.decorator import _agent_info_context
 from .agent_manager import AgentManager
 
 MAX_RETRY_ATTEMPTS = 5
@@ -78,11 +81,21 @@ Complete task based on <instruction>.
 SUB_AGENTS_FOOTNOTE = """
 You have the following subagents that can help you:
 {subagents}
-Please **always** use the tool `transfer_to_subagent` to transfer the task to the sub-agent.
-You pass the name of the sub-agent and the task to the tool.
-**Always** use reflect to perform reflection for decision-making, before transferring the task to the sub-agent. When reflecting, always include:
-1. Why shall I transfer the task to certain sub-agent?
-2. Is the task description clear and complete? If not, an update the task description might be needed. 
+
+<transfer-to-subagent-rule>
+You have two transfer patterns to choose from:
+
+1. **ONE-TO-ONE** (`transfer_to_subagent`): Transfer a task to a single sub-agent. Pass the sub-agent's name as a string. Use this when only one sub-agent is needed for the task.
+2. **ONE-TO-MANY** (`transfer_to_subagents`): Transfer a task to multiple sub-agents in parallel. Pass a list of sub-agent names. Use this when multiple sub-agents can work on the same task or different aspects of the task concurrently. Only sub-agents marked with `is_async=True` can be used with this pattern.
+
+**Always** use reflect to perform reflection for decision-making, before transferring. When reflecting, always include:
+1. Do I need one sub-agent or multiple sub-agents for this task?
+2. If multiple, can they work in parallel on the same task, or do they depend on each other's results?
+   - If they can work in parallel → use `transfer_to_subagents` (ONE-TO-MANY).
+   - If they depend on each other → use `transfer_to_subagent` (ONE-TO-ONE) sequentially.
+3. Why shall I transfer the task to certain sub-agent(s)?
+4. Is the task description clear and complete? If not, update the task description before transferring.
+</transfer-to-subagent-rule>
 """
 
 
@@ -137,7 +150,7 @@ class TinyAgent:
         self.vertexai_project = vertexai_project
         self.vertexai_location = vertexai_location
         self.google_ai_studio_api_key = google_ai_studio_api_key
-        longst_int_time = int(time.time())
+        longst_int_time = int(time.time() * 1000000)
         self.agent_id = f"{longst_int_time}-{str(uuid.uuid4())}"
         self.name = name
         self.model = model
@@ -173,6 +186,7 @@ class TinyAgent:
             get_current_datetime_in_utc,
             get_current_datetime_in_local,
             transfer_to_subagent,
+            transfer_to_subagents,
         ]
         all_tools = self._append_tools(builtin_tools, tools)
         # Create independent copies of tools to avoid shared state in concurrent execution

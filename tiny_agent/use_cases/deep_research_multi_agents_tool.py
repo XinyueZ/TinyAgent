@@ -34,10 +34,14 @@ Compose markdown content based on the **final report** including the following s
 - **Citations including URLs**: All sources referenced, organized by topic
 - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
 
+Output:
 At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
 Save the report to a file at the path "{output_path}".
 
-**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, stop working.
+**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, response to user..
+
+Response:
+Read out the final report file as the response to the user.
 """
 
 _RESEARCHER_PROMPT = """
@@ -151,9 +155,9 @@ class DeepResearchMultAgentsTool:
             if not topics:
                 return "We have no topics to start research. Please provide some topics as list to start research."
 
-            def _run_agent(topic: str) -> tuple[str, str]:
+            def _run_agent(idx: int, topic: str) -> tuple[str, str]:
                 sub_agent = TinyAgent(
-                    name="researcher",
+                    name=f"researcher_{idx}",
                     model=self.research_agent_model,
                     output_root=self.output_root,
                     tools=self.research_tools,
@@ -173,7 +177,9 @@ class DeepResearchMultAgentsTool:
             with ThreadPoolExecutor(
                 max_workers=min(len(topics), self._get_cpu_core_count())
             ) as executor:
-                futures = {executor.submit(_run_agent, t): t for t in topics}
+                futures = {
+                    executor.submit(_run_agent, i, t): t for i, t in enumerate(topics)
+                }
                 result_tuples = []
                 for future in as_completed(futures):
                     topic = futures[future]

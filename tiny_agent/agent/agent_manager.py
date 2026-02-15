@@ -36,5 +36,11 @@ class AgentManager:
 
     def unregister(self, agent_id: str) -> None:
         with self._agents_lock:
-            if agent_id in self._agents:
-                del self._agents[agent_id]
+            self._unregister_recursive(agent_id)
+
+    def _unregister_recursive(self, agent_id: str) -> None:
+        agent = self._agents.get(agent_id)
+        if agent is not None:
+            for sa in agent.subagents.values():
+                self._unregister_recursive(sa.agent_id)
+            del self._agents[agent_id]
