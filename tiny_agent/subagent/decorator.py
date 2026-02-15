@@ -42,17 +42,9 @@ def subagent(_cls=None, *, is_async: bool = False):
 
         cls._is_async = is_async
 
-        def enter_worker_book(self):
-            pass
-
-        def leave_worker_book(self):
-            pass
-
         def __str__(self):
             return cls.__doc__ or ""
 
-        cls.enter_worker_book = enter_worker_book
-        cls.leave_worker_book = leave_worker_book
         cls.__str__ = __str__
 
         return cls
