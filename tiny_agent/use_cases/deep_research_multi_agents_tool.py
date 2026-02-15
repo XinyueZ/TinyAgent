@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from tiny_agent.use_cases import NUM_RESEARCHER_RESULTS
+
 from ..tools.decorator import *
 from ..agent.tiny_agent import TinyAgent
 
@@ -47,7 +49,7 @@ Read out the final report file as the response to the user.
 _RESEARCHER_PROMPT = """
 Your task is to conduct deep research on the topic: {topic}.
 
-Use the **all possible internet or web search tools** to perform a web search for the topic. Search for **at most 3 results**.
+Use the **all possible internet or web search tools** to perform a web search for the topic. Search for **at most {num_results} results**.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
 Record the **full raw data of research results** into memory.
 
@@ -169,7 +171,7 @@ class DeepResearchMultAgentsTool:
                 output_path = f"{sub_agent.output_location}/result.md"
                 sub_agent(
                     contents=_RESEARCHER_PROMPT.format(
-                        topic=topic, output_path=output_path
+                        topic=topic, output_path=output_path, num_results=NUM_RESEARCHER_RESULTS
                     )
                 )
                 return (topic, output_path)

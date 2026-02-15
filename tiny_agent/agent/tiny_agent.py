@@ -2,7 +2,7 @@ import time
 import uuid
 from functools import wraps
 from typing import Callable, Optional
-
+import os
 from google import genai
 from google.genai import types
 
@@ -35,6 +35,11 @@ from .agent_manager import AgentManager
 MAX_RETRY_ATTEMPTS = 5
 SYSTEM_INSTRUCTION = """
 You are an autonomous AI agent.
+"""
+SUBAGENT_INSTRUCTION_SUFFIX = """
+{subagent_instruction}
+**ALWAYS** when you have completed, please save the report to file: {output_path}
+**Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
 """
 INSTRUCTIONS = """
 Complete task based on <instruction>.
@@ -76,7 +81,7 @@ Complete task based on <instruction>.
 - [🔄] Task 3
 - [❌] Task 4
 </execute-step-rule>
-"""
+""".strip()
 
 SUB_AGENTS_FOOTNOTE = """
 You have the following subagents that can help you:
@@ -96,11 +101,7 @@ You have two transfer patterns to choose from:
 3. Why shall I transfer the task to certain sub-agent(s)?
 4. Is the task description clear and complete? If not, update the task description before transferring.
 </transfer-to-subagent-rule>
-"""
-
-DEFAULT_OUPUT = """
-**CRITICAL**: Unless otherwise specified, all outputs must be saved to the default output directory: {output_root}
-"""
+""".strip()
 
 class TinyAgent:
     def __init__(
@@ -149,6 +150,9 @@ class TinyAgent:
             raise ValueError(
                 "google_ai_studio_api_key must be provided when vertexai is False"
             )
+        
+        self.is_subagent = hasattr(self, '_is_async')
+        
         self.vertexai = vertexai
         self.vertexai_project = vertexai_project
         self.vertexai_location = vertexai_location
@@ -303,15 +307,15 @@ class TinyAgent:
                 **{**self.config.model_dump(exclude_none=True), **kwargs}
             )
 
-        prompt = f"""{contents}
+        prompt = f"""
+{SUBAGENT_INSTRUCTION_SUFFIX.format(subagent_instruction=self.__str__(), output_path=os.path.join(self.output_location, "result.md")) if self.is_subagent else ""}
+
+{contents}
            
 {INSTRUCTIONS}
 
 {SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
-
-{DEFAULT_OUPUT.format(output_root=self.output_root)}
 """.strip()
-
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,

@@ -3,6 +3,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tiny_agent.subagent.decorator import subagent
+from tiny_agent.use_cases import NUM_RESEARCHER_RESULTS
 
 from ..tools.decorator import *
 from ..agent.tiny_agent import TinyAgent
@@ -20,7 +21,7 @@ The task:
 
 Decompose the task into different topics (at most {max_topics} topics) and assign them to your team coworkers.
 
-Complete the task in parallel with different coworkers. You can dispatch the task to **different combinations of coworkers** as you like.
+Complete the task by assigning decomposed topics to your coworkers. You may assign each topic to a single coworker or distribute topics across different combinations of coworkers as needed.
 **You must not** do any research yourself; instead, you must gather and merge the results from the different coworkers.
 Read the result file (if it exists) or memory file (if the result does not exist but memory exists) of every coworker.
 Record all coworkers' results (or memories) into your memory to use them later for generating a final report.
@@ -34,6 +35,7 @@ Compose markdown content based on the **final report** including the following s
 - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
 
 Output:
+- At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
 - You should provide only **one file** as the final report; please avoid providing multiple files.
 - Save the final report to a file at the path {output_path}/result.md.
 
@@ -54,7 +56,8 @@ Read the final report file and provide it as the response to the user.
 
 @subagent(is_async=True)
 class DeepResearchAgent(TinyAgent):
-    """An intelligent agent that performs research for a given topic with different tools
+    f"""An intelligent agent that performs research for a given topic.
+    Use the **all possible internet or web search or other tools** to perform a web search for the topic. Search for **at most {NUM_RESEARCHER_RESULTS} results**.
     **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
     Record the **full raw data of research results** into memory.
 
@@ -67,10 +70,6 @@ class DeepResearchAgent(TinyAgent):
     - **Description of the Topic**
     - **Citations including URLs**
     - (Optional) Some additional information you find useful, but again, don't pursue perfection—just keep it concise.
-    
-    **ALWAYS** when you have completed, please save the report to the default output, filename **must** be "result.md"
-
-    **Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
     """
     ...
 
