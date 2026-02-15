@@ -98,6 +98,9 @@ You have two transfer patterns to choose from:
 </transfer-to-subagent-rule>
 """
 
+DEFAULT_OUPUT = """
+**CRITICAL**: Unless otherwise specified, all outputs must be saved to the default output directory: {output_root}
+"""
 
 class TinyAgent:
     def __init__(
@@ -305,6 +308,8 @@ class TinyAgent:
 {INSTRUCTIONS}
 
 {SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
+
+{DEFAULT_OUPUT.format(output_root=self.output_root)}
 """.strip()
 
         response = self.client.models.generate_content(

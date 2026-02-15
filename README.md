@@ -128,6 +128,7 @@ finally:
 |-----|-------------|-----------------|-----------------|
 | `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/deep-agents-research` | Deep agents research with a lead agent coordinating multiple sub-agents | `cd apps/deep-agents-research`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-agents-research.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/app-builder` | Builds a CLI `.sh` script for any app given the path to its main file. Takes `--main` pointing to the app's entry-point `.py` file, reads its `argparse` definition, references existing `CLIs/*.sh` scripts, and generates a new matching `.sh` under `CLIs/`. 👍 The `CLIs/app-builder.sh` script itself was built by this app! | `cd apps/app-builder`<br>`python ./app-builder.py --main /path/to/apps/my-app/main.py`<br>[More ↓](#run-inside-container) | `CLIs/app-builder.sh`<br>`--main /path/to/apps/my-app/main.py`<br>[More ↓](#run-from-host) |
 
 - `--output` (required): Output directory for results.
@@ -303,12 +304,15 @@ $APP_BUILDER --main apps/my-new-app/main.py
 
 ## ⚡ Agent Design & Performance
 
-### Case Study: Single Agent vs Deep Research (Multi-Agent, Tool-Driven)
+### Case Study: Single Agent vs Deep Research (Multi-Agent Patterns)
 
-This repo currently includes two representative design patterns:
+This repo currently includes three representative design patterns:
 
 - `apps/single-tavily-search-agent`: a single agent that iterates on a task and uses Tavily search.
-- `apps/deep-research-multi-agents-tool-tavily-search`: a tool-driven deep-research workflow that spawns multiple agents concurrently.
+- `apps/deep-research-multi-agents-tool-tavily-search`: a supervisor-style deep-research workflow (tool-driven), where a lead agent decomposes work and orchestrates multiple concurrent research agents.
+- `apps/deep-agents-research`: a supervisor-style deep research workflow where a lead agent dispatches tasks to multiple coworker sub-agents hierarchically, then synthesizes a final report.
+
+Both deep research variants are supervisor-style multi-agent systems: the main/lead agent coordinates sub-agents, gathers their outputs or memories, and synthesizes one consolidated report.
 
 In this case study, the **deep research** pattern is generally **better** than a single-agent loop:
 
