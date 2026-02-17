@@ -18,7 +18,9 @@ def read_work_plan() -> str:
         with open(f"{agent_output_location}/work_plan.md", "r") as f:
             work_plan = f.read()
             format_text(work_plan, f"{agent_name}-{agent_id} | Read Work-plan", "green")
-        return work_plan
+        return f"""Work-plan (saved in file:{agent_output_location}/work_plan.md):
+{work_plan}
+"""
     except FileNotFoundError:
         format_text(
             "**No work-plan has been created yet.",
@@ -52,9 +54,7 @@ def create_work_plan(work_plan: str) -> str:
         with open(f"{agent_output_location}/work_plan.md", "w") as f:
             f.write(work_plan)
             format_text(work_plan, f"{agent_name}-{agent_id} | Create Work-plan", "red")
-        return f"""Work-plan created in file: {agent_output_location}/work_plan.md
------
-#### Work-plan
+        return f"""Work-plan created (saved in file: {agent_output_location}/work_plan.md):
 {work_plan}
 """
     except Exception as e:
@@ -84,7 +84,8 @@ def update_work_plan(updated_work_plan: str) -> str:
             format_text(
                 updated_work_plan, f"{agent_name}-{agent_id} | Update Work-plan", "red"
             )
-        return f"Updated work-plan: {updated_work_plan}"
+        return f"""Updated work-plan(saved in file: {agent_output_location}/work_plan.md):
+{updated_work_plan}"""
     except Exception as e:
         import traceback
 
@@ -112,7 +113,8 @@ def reflect(reflection: str) -> str:
             f.write(reflection)
             f.write("\n")
             format_text(reflection, f"{agent_name}-{agent_id} | Reflect", "red")
-        return f"**Reflection recorded:**\n {reflection}\n"
+        return f"""Reflection recorded(file: {agent_output_location}/reflection.md):
+{reflection}"""
     except Exception as e:
         import traceback
 
@@ -135,7 +137,8 @@ def read_memory() -> str:
         with open(f"{agent_output_location}/memory.md", "r") as f:
             memory = f.read()
             format_text(memory, f"{agent_name}-{agent_id} | Read memory", "green")
-        return memory
+        return f"""Memory (saved in file: {agent_output_location}/memory.md):
+{memory}"""
     except FileNotFoundError:
         format_text(
             "No memory has been created yet.",
@@ -155,7 +158,7 @@ def update_memory(entry: str) -> str:
         entry: The new entry to append to the memory file.
 
     Returns:
-        A Python `str` confirming that the memory entry was added.
+        A Python `str` confirming that the memory entry was appended.
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
@@ -167,7 +170,8 @@ def update_memory(entry: str) -> str:
             f.write(entry)
             f.write("\n")
             format_text(entry, f"{agent_name}-{agent_id} | Update memory", "red")
-        return f"A new memory entry added: {entry}"
+        return f"""New memory entry appended (saved in file: {agent_output_location}/memory.md):
+{entry}"""
     except Exception as e:
         import traceback
 

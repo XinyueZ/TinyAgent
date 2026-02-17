@@ -5,8 +5,8 @@ from functools import wraps
 from typing import Callable, Optional
 from typing_extensions import TypedDict
 import os
-from google import genai
 from google.genai import types
+from .ollama_utils import ollama_automatic_function_calling
 from ..tools.buildins.core import (
     create_work_plan,
     read_memory,
@@ -46,8 +46,8 @@ INSTRUCTIONS = """
 Complete task based on <instruction>.
 
 <instruction>
-- Before starting work, use create_work_plan to create a work-plan that outlines each step required to complete the task.
-- Execute the steps in the work-plan **STEP-BY-STEP aka. ONE-BY-ONE**.
+- **Always** Before starting work, use create_work_plan to create a work-plan that outlines each step required to complete the task.
+- **Always** Execute the steps in the work-plan **STEP-BY-STEP aka. ONE-BY-ONE**.
 - **Always** use update_memory to record your actions after calling any tool or receiving response. **WARNING**: This does not include work-plan (step status) update actions, as work-plan has its own separate isolated storage mechanism.
 - After completing a step of the work-plan, **always** use update_work_plan to update the status of that step in work-plan.   
 - **Always** use reflect to perform reflection for decision-making, after updating a step status in work-plan. When reflecting, always include:
@@ -83,6 +83,15 @@ Complete task based on <instruction>.
 - [❌] Task 4
 </execute-step-rule>
 """.strip()
+
+STORAGE_INSTRUCTION = """
+We have the following storage mechanisms:
+<storage-instruction>
+Work-plan storage: {work_plan_storage}
+Memory storage: {memory_storage}
+Reflection storage: {reflection_storage}
+</storage-instruction>
+"""
 
 SUB_AGENTS_FOOTNOTE = """
 You have the following subagents that can help you:
@@ -122,12 +131,11 @@ GENAI_STUFF_DEFAULTS: GenaiStuffDict = {
 
 class OllamaStuffDict(TypedDict, total=False):
     system_instruction: Optional[str]
-    think: Optional[bool | str]
+    host: Optional[str]
 
 
 OLLAMA_STUFF_DEFAULTS: OllamaStuffDict = {
     "system_instruction": SYSTEM_INSTRUCTION,
-    "think": True,
 }
 
 
@@ -137,26 +145,24 @@ class TinyAgent:
         name: str,
         model: str,
         output_root: str,
-        tools: list[Callable] = list(),
-        subagents: list["TinyAgent"] = list(),
         genai_stuff: GenaiStuffDict = None,
         ollama_stuff: OllamaStuffDict = None,
+        tools: list[Callable] = list(),
+        subagents: list["TinyAgent"] = list(),
         **kwargs,
     ):
         """
         Initialize the TinyAgent.
 
         Args:
-            name: Agent name
-            model: Model to use
-            tools: List of tools
-            output_root: Output root directory, final output location will be {output_root}/{name}-{agent_id}"
-            system_instruction: System instruction
-            vertexai: Whether to use Vertex AI
-            vertexai_project: Vertex AI project
-            vertexai_location: Vertex AI location
-            google_ai_studio_api_key: Google AI Studio API key
-            **kwargs: Additional arguments to model config.
+            name: Agent name.
+            model: Model to use for generation.
+            output_root: Output root directory, final output location will be {output_root}/{name}-{agent_id}.
+            tools: List of callable tools available to the agent.
+            subagents: List of TinyAgent subagents for hierarchical task delegation.
+            genai_stuff: Configuration dict for Google GenAI (Vertex AI or AI Studio).
+            ollama_stuff: Configuration dict for Ollama.
+            **kwargs: Additional arguments passed to model config.
         """
         if not name:
             # Agent name is required
@@ -165,13 +171,14 @@ class TinyAgent:
             # Output root is required
             raise ValueError("Output root is required")
 
-        if genai_stuff is None and ollama_stuff is None:
+        if not genai_stuff and not ollama_stuff:
             raise ValueError("genai_stuff or ollama_stuff must be provided")
-        if genai_stuff is not None and ollama_stuff is not None:
+        if genai_stuff and ollama_stuff:
             raise ValueError(
                 "genai_stuff and ollama_stuff cannot be provided at the same time"
             )
 
+        self.genai_stuff = None
         if genai_stuff:
             if genai_stuff.get("vertexai") and not (
                 genai_stuff.get("vertexai_project")
@@ -188,9 +195,8 @@ class TinyAgent:
                 )
             self.genai_stuff = {**GENAI_STUFF_DEFAULTS, **genai_stuff}
 
+        self.ollama_stuff = None
         if ollama_stuff:
-            if not ollama_stuff.get("model"):
-                raise ValueError("model must be provided when using ollama")
             self.ollama_stuff = {**OLLAMA_STUFF_DEFAULTS, **ollama_stuff}
 
         self.is_subagent = hasattr(self, "_is_async")
@@ -203,6 +209,8 @@ class TinyAgent:
         self.output_location = f"{self.output_root}/{self.name}-{self.agent_id}"
 
         if self.genai_stuff:
+            from google import genai
+
             self.client = genai.Client(
                 **(
                     {
@@ -220,6 +228,11 @@ class TinyAgent:
                     }
                 ),
             )
+
+        if self.ollama_stuff:
+            from ollama import Client
+
+            self.client = Client(host=self.ollama_stuff.get("host"))
 
         builtin_tools = [
             create_work_plan,
@@ -271,6 +284,18 @@ class TinyAgent:
                     },
                     **kwargs,
                 }
+            )
+
+        if self.ollama_stuff:
+            from functools import partial
+
+            self.ollama_stuff["config"] = partial(
+                ollama_automatic_function_calling,
+                self.client.chat,
+                model=self.model,
+                max_turns=99999999,
+                tools=self.tools,
+                **kwargs,
             )
         self.subagents = self._append_subagents(dict(), subagents)
         AgentManager().register(self)
@@ -343,7 +368,7 @@ class TinyAgent:
 
     def __call__(
         self, contents, **kwargs
-    ) -> types.GenerateContentResponse | ChatResponse:
+    ) -> types.GenerateContentResponse | ChatResponse | None:
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
@@ -362,8 +387,11 @@ class TinyAgent:
            
 {INSTRUCTIONS}
 
+{STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"))}
+
 {SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()
+
         if self.genai_stuff:
             response = self.client.models.generate_content(
                 model=self.model,
@@ -371,5 +399,13 @@ class TinyAgent:
                 config=self.genai_stuff["config"],
             )
             return response
-        else:
-            raise ValueError("genai_stuff is not provided")
+
+        if self.ollama_stuff:
+            messages = [
+                {"role": "system", "content": self.ollama_stuff["system_instruction"]},
+                {"role": "user", "content": prompt},
+            ]
+            response, _ = self.ollama_stuff["config"](messages=messages)
+            return response
+
+        raise ValueError("Neither genai nor ollama stuff is specified")

@@ -9,4 +9,9 @@ VERBOSE=2
 # tavily-python is required
 TAVILY_API_KEY_0=tvly-dev-asdf
 TAVILY_API_KEY_1=tvly-dev-asdf
-TAVILY_API_KEY_2=tvly-dev-asdf 
+TAVILY_API_KEY_2=tvly-dev-asdf
+
+# Ollama (optional, only needed when using Ollama backend)
+# Resolution order: OLLAMA_BASE_URL -> OLLAMA_HOST -> http://localhost:11434
+OLLAMA_BASE_URL=http://host.docker.internal:11434  # Ollama on the host machine (checked first)
+OLLAMA_HOST=http://localhost:11434                  # Ollama inside the container (fallback)

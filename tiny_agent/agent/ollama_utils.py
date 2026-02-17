@@ -1,7 +1,7 @@
 from ollama import ChatResponse, chat
 
 
-def ollama_chat_automatic_function_calling(
+def ollama_automatic_function_calling(
     client_fn: chat,
     messages: list[dict],
     options: dict = None,

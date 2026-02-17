@@ -15,6 +15,9 @@ Whether it will be expanded in the future? We'll see. No promises.
 
 - [Environment Setup](#environment-setup)
 - [Agent Use](#agent-use)
+  - [Google GenAI (Vertex AI / AI Studio)](#google-genai-vertex-ai--ai-studio)
+  - [Ollama](#ollama)
+  - [Common Notes](#common-notes)
 - [Apps](#apps)
   - [Run Examples](#run-examples)
     - [📝 Run Tasks](#run-tasks)
@@ -39,7 +42,7 @@ Copy `apps/env_sample` to `apps/.env` and fill in your values:
 cp apps/env_sample apps/.env
 ```
 
-This configures **Vertex AI / Google GenAI** (`GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_AI_STUDIO_API_KEY`) and **Tavily** API keys.
+This configures **Google GenAI**, **Ollama**, and **Tavily** API keys. See `apps/env_sample` for all available variables.
 
 ### Google GenAI: Vertex AI vs Google AI Studio (Mutually Exclusive)
 
@@ -55,6 +58,26 @@ For Google models, you can choose **exactly one** of the following authenticatio
   - Set `GOOGLE_AI_STUDIO_API_KEY`
 
 These two modes are **mutually exclusive**: when `GOOGLE_GENAI_USE_VERTEXAI=true`, the AI Studio API key will not be used.
+
+<a id="ollama-env"></a>
+
+### Ollama
+
+When using the Ollama backend, configure the server address. The resolution order is:
+
+1. `OLLAMA_BASE_URL` — Ollama on the **host machine** (checked first). Typical value: `http://host.docker.internal:11434` when the agent runs inside a Docker container but Ollama runs on the host.
+2. `OLLAMA_HOST` — Ollama **inside the container** (fallback). Typical value: `http://localhost:11434`.
+3. Default: `http://localhost:11434`.
+
+This matches the lookup logic used in apps (e.g. `apps/single-ollama-agent/agent.py`):
+
+```python
+os.environ.get("OLLAMA_BASE_URL", os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+```
+
+These are only needed when using `ollama_stuff` in `TinyAgent`.
+
+### Tavily
 
 - `TAVILY_API_KEY_0` is **required** at minimum.
 - You can register multiple Tavily API keys — number them starting from `0` (e.g. `TAVILY_API_KEY_0`, `TAVILY_API_KEY_1`, `TAVILY_API_KEY_2`, ...).
@@ -84,7 +107,11 @@ docker logs -f TinyAgentDev
 
 ## Agent Use
 
-A minimal example showing how to create and run a `TinyAgent` (see [`apps/single-tavily-search-agent/agent.py`](apps/single-tavily-search-agent/agent.py) for a full working example):
+`TinyAgent` supports two **mutually exclusive** backends — **Google GenAI** (Vertex AI or AI Studio) and **Ollama**. You must provide exactly one of `genai_stuff` or `ollama_stuff` when creating an agent.
+
+### Google GenAI (Vertex AI / AI Studio)
+
+See [`apps/single-tavily-search-agent/agent.py`](apps/single-tavily-search-agent/agent.py) for a full working example.
 
 ```python
 from tiny_agent.agent.tiny_agent import TinyAgent
@@ -94,19 +121,21 @@ agent = TinyAgent(
     name="my_agent",
     model="gemini-2.5-flash",
     output_root="./output",
+    genai_stuff={
+        # Provider — pick one (mutually exclusive):
+        # Vertex AI
+        "vertexai": True,
+        "vertexai_project": "<your-project-id>",
+        "vertexai_location": "europe-west4",
+        # Google AI Studio
+        # "vertexai": False,
+        # "google_ai_studio_api_key": "<your-api-key>",
+    },
     tools=[...],            # list of tool functions
     # subagents=[...],      # optional sub-agents
-    # Model options
+    # Model options passed as **kwargs
     temperature=1.0,
     seed=42,
-    # Provider — pick one (mutually exclusive):
-    # Vertex AI
-    vertexai=True,
-    vertexai_project="<your-project-id>",
-    vertexai_location="europe-west4",
-    # Google AI Studio
-    # vertexai=False,
-    # google_ai_studio_api_key="<your-api-key>",
 )
 
 try:
@@ -115,8 +144,58 @@ finally:
     AgentManager().unregister(agent.agent_id)
 ```
 
+`genai_stuff` accepts the following keys (all optional except the provider choice):
+
+| Key | Description |
+|-----|-------------|
+| `system_instruction` | Custom system prompt (defaults to built-in) |
+| `vertexai` | `True` for Vertex AI, `False` for AI Studio |
+| `vertexai_project` | GCP project ID (required when `vertexai=True`) |
+| `vertexai_location` | GCP region (required when `vertexai=True`) |
+| `google_ai_studio_api_key` | API key (required when `vertexai=False`) |
+| `http_options` | `types.HttpOptions` for retry/timeout config |
+
+### Ollama
+
+See [`apps/single-ollama-agent/agent.py`](apps/single-ollama-agent/agent.py) for a full working example.
+
+```python
+from tiny_agent.agent.tiny_agent import TinyAgent
+from tiny_agent.agent.agent_manager import AgentManager
+
+agent = TinyAgent(
+    name="my_agent",
+    model="qwen3:8b",
+    output_root="./output",
+    ollama_stuff={
+        "host": "http://localhost:11434",
+    },
+    tools=[...],            # list of tool functions
+    # subagents=[...],      # optional sub-agents
+    # Model options passed as **kwargs
+    think=True,
+    options={"temperature": 0.5, "top_p": 0.5, "top_k": 10},
+)
+
+try:
+    result = agent(contents="Your task or question here")
+finally:
+    AgentManager().unregister(agent.agent_id)
+```
+
+`ollama_stuff` accepts the following keys (all optional):
+
+| Key | Description |
+|-----|-------------|
+| `system_instruction` | Custom system prompt (defaults to built-in) |
+| `host` | Ollama server URL (defaults to `http://localhost:11434`). See [Environment Setup > Ollama](#ollama-env) for env var configuration. |
+
+### Common Notes
+
+- `genai_stuff` and `ollama_stuff` are **mutually exclusive** — providing both raises `ValueError`.
 - `tools` — a list of functions decorated with `@tool()` (see [Tools](#tools)).
 - `subagents` — optional list of sub-agent instances (see [Sub-Agents](#sub-agents)).
+- `**kwargs` — additional model config options (e.g. `temperature`, `seed` for GenAI; `think`, `options` for Ollama).
 - Wrap the agent call in `try/finally` and call `AgentManager().unregister(agent.agent_id)` to clean up the agent from the singleton registry after execution.
 - The agent writes artifacts (work plan, memory, reflection, result) to `<output_root>/<agent-name>-<agent-id>/` (see [Agent Output Artifacts](#agent-output-artifacts)).
 
@@ -124,12 +203,13 @@ finally:
 
 ## Apps
 
-| App | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
-|-----|-------------|-----------------|-----------------|
-| `apps/single-tavily-search-agent` | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
-| `apps/deep-research-multi-agents-tool-tavily-search` | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
-| `apps/deep-agents-research` | Deep agents research with a lead agent coordinating multiple sub-agents | `cd apps/deep-agents-research`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-agents-research.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
-| `apps/app-builder` | Builds a CLI `.sh` script for any app given the path to its main file. Takes `--main` pointing to the app's entry-point `.py` file, reads its `argparse` definition, references existing `CLIs/*.sh` scripts, and generates a new matching `.sh` under `CLIs/`. 👍 The `CLIs/app-builder.sh` script itself was built by this app! | `cd apps/app-builder`<br>`python ./app-builder.py --main /path/to/apps/my-app/main.py`<br>[More ↓](#run-inside-container) | `CLIs/app-builder.sh`<br>`--main /path/to/apps/my-app/main.py`<br>[More ↓](#run-from-host) |
+| App | Backend | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
+|-----|---------|-------------|-----------------|-----------------|
+| `apps/single-tavily-search-agent` | Google GenAI | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/single-ollama-agent` | Ollama | Single agent with web search via Ollama | `cd apps/single-ollama-agent`<br>`python ./agent.py --output ./agent-output --tasks ./tasks`<br>[More ↓](#run-inside-container) | — |
+| `apps/deep-research-multi-agents-tool-tavily-search` | Google GenAI | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/deep-agents-research` | Google GenAI | Deep agents research with a lead agent coordinating multiple sub-agents | `cd apps/deep-agents-research`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-agents-research.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/app-builder` | Google GenAI | Builds a CLI `.sh` script for any app given the path to its main file. Takes `--main` pointing to the app's entry-point `.py` file, reads its `argparse` definition, references existing `CLIs/*.sh` scripts, and generates a new matching `.sh` under `CLIs/`. 👍 The `CLIs/app-builder.sh` script itself was built by this app! | `cd apps/app-builder`<br>`python ./app-builder.py --main /path/to/apps/my-app/main.py`<br>[More ↓](#run-inside-container) | `CLIs/app-builder.sh`<br>`--main /path/to/apps/my-app/main.py`<br>[More ↓](#run-from-host) |
 
 - `--output` (required): Output directory for results.
 - `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
@@ -160,7 +240,8 @@ SUMMARIZE_MODEL_CONFIG = { "temperature": 0.0, "seed": 42, ... }
 
 See the following files for examples of how to define these:
 - `apps/__init__.py` — shared search/summarization model config
-- `apps/single-tavily-search-agent/agent.py` — single-agent config
+- `apps/single-tavily-search-agent/agent.py` — single GenAI agent config
+- `apps/single-ollama-agent/agent.py` — single Ollama agent config
 - `apps/deep-research-multi-agents-tool-tavily-search/deep-research.py` — multi-agent config (main + research agents)
 - `apps/app-builder/app-builder.py` — app-builder agent config
 
