@@ -24,7 +24,9 @@ Whether it will be expanded in the future? We'll see. No promises.
     - [🏗️ Run App Builder](#run-app-builder)
   - [🛠️ Developing Apps](#developing-apps)
   - [🏗️ App Builder](#app-builder)
-- [⚡ Agent Design & Performance](#agent-design-performance)
+- [🧪 Experiments](#experiments)
+  - [Experiment I: Single Agent vs Tool-Driven Multi-Agent](#experiment-i)
+  - [Experiment II: Single Agent vs Tool-Driven Multi-Agent vs Sub-Agent Multi-Agent](#experiment-ii)
 - [📦 Tools](#tools)
 - [🤖 Sub-Agents](#sub-agents)
 - [Agent Output Artifacts](#agent-output-artifacts)
@@ -381,35 +383,65 @@ $APP_BUILDER --main apps/my-new-app/main.py
 > **Note:** If the image hasn't been rebuilt since adding the `chmod +x` step in the Dockerfile, you may need to run `chmod +x /app/CLIs/app-builder.sh` manually inside the container first.
 
 
-<a id="agent-design-performance"></a>
+<a id="experiments"></a>
 
-## ⚡ Agent Design & Performance
+## 🧪 Experiments
 
-### Case Study: Single Agent vs Deep Research (Multi-Agent Patterns)
+> **Note**: Experiment results are for reference only. Actual performance may vary depending on hardware, network conditions, model versions, and other factors.
 
-This repo currently includes three representative design patterns:
+<a id="experiment-i"></a>
 
-- `apps/single-tavily-search-agent`: a single agent that iterates on a task and uses Tavily search.
+### Experiment I: Single Agent vs Tool-Driven Multi-Agent
+
+This experiment compares two design patterns:
+
+- `apps/single-tavily-search-agent`: a single agent that iterates on a task and uses Tavily search. It processes tasks sequentially — seemingly straightforward, but this simplicity makes it the easiest pattern to reason about and debug.
 - `apps/deep-research-multi-agents-tool-tavily-search`: a supervisor-style deep-research workflow (tool-driven), where a lead agent decomposes work and orchestrates multiple concurrent research agents.
-- `apps/deep-agents-research`: a supervisor-style deep research workflow where a lead agent dispatches tasks to multiple coworker sub-agents hierarchically, then synthesizes a final report.
 
-Both deep research variants are supervisor-style multi-agent systems: the main/lead agent coordinates sub-agents, gathers their outputs or memories, and synthesizes one consolidated report.
-
-In this case study, the **deep research** pattern is generally **better** than a single-agent loop:
+In this experiment, the **tool-driven multi-agent** pattern is generally **better** than a single-agent loop:
 
 - **Coverage**: parallel sub-agents can explore different angles and sources.
 - **Speed**: concurrency reduces wall-clock time for wide research.
 - **Robustness**: even if one sub-agent underperforms, the overall result can still be strong.
 
-> Personal note: in this repo, the deep-research multi-agent workflow runs **concurrently via multithreading**, and that is likely a big part of why it performs better in practice.
-
 > **⚠️ Warning**
 >
-> The current deep-research apps rely on **random task decomposition** (randomly splitting the task into topics/subtopics). As a result, each run can produce different intermediate topics and the overall output quality/performance can vary from run to run.
+> Both apps rely on **random task decomposition** (randomly splitting the task into topics/subtopics). As a result, each run can produce different intermediate topics and the overall output quality/performance can vary from run to run.
 
 🎥 YouTube walkthrough (click the preview):
 
- [![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/JMOZ5JFBYyo)
+[![YouTube Preview](media/labubu_vs_hellokitty.png)](https://youtu.be/JMOZ5JFBYyo)
+
+---
+
+<a id="experiment-ii"></a>
+
+### Experiment II: Single Agent vs Tool-Driven Multi-Agent vs Sub-Agent Multi-Agent
+
+This experiment extends Experiment I by adding a third pattern, comparing all three:
+
+- `apps/single-tavily-search-agent`: a single agent that iterates on a task and uses Tavily search.
+- `apps/deep-research-multi-agents-tool-tavily-search`: a tool-driven multi-agent workflow where the lead agent decomposes the task into as many subtasks as there are CPU cores, then spawns concurrent research agents via multithreading to handle them in parallel.
+- `apps/deep-agents-research`: a sub-agent multi-agent workflow where a fixed number of sub-agents (equal to the CPU core count) are pre-created, and the lead agent dispatches subtasks to them hierarchically, then synthesizes a final report.
+
+#### Results
+
+1. **Tool-driven multi-agent** (`deep-research-multi-agents-tool-tavily-search`) was the **fastest** by a clear margin. Its implementation decomposes the task into a number of subtasks matching the available CPU cores, then launches research agents concurrently via multithreading — maximizing parallelism.
+
+2. **Single agent** (`single-tavily-search-agent`) came in **second**. It processes tasks sequentially one by one — seemingly straightforward, but this simplicity makes it the easiest to understand and debug. Despite this, it was still faster than the sub-agent approach.
+
+3. **Sub-agent multi-agent** (`deep-agents-research`) was the **slowest**. Like the tool-driven variant, it also decomposes the task based on CPU core count and pre-creates that many sub-agents. However, the lead agent randomly decides how to assign subtasks to those sub-agents — it may assign 3–4 sub-agents to a single subtask, or have one sub-agent handle a task alone. This unpredictable allocation leads to uneven workload distribution and longer overall execution time.
+
+#### Takeaways
+
+- Structured, deterministic parallelism (tool-driven, CPU-core-based decomposition) significantly outperforms random agent orchestration.
+- Sub-agent flexibility comes at a cost: without a deliberate allocation strategy, random assignment can lead to worse performance than a simple single-agent loop.
+- As noted in Experiment I, all apps rely on random task decomposition, and results will vary across runs depending on hardware, network conditions, and the nature of the task.
+- Additionally, both multi-agent variants (tool-driven and sub-agent) rely on **parallel threading**, which inherently introduces non-determinism — thread scheduling, network latency per thread, and API rate limits can all cause fluctuations between runs. This is a contributing factor to the variability observed across experiments.
+
+🎥 YouTube walkthrough (click the preview):
+
+<a href="https://youtu.be/F2oV1Pr2LWA"><img src="media/experimentII.png" alt="YouTube Preview" width="25%"></a>
 
 
 <a id="tools"></a>
