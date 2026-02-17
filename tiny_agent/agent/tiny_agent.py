@@ -1,11 +1,12 @@
+from ollama import ChatResponse
 import time
 import uuid
 from functools import wraps
 from typing import Callable, Optional
+from typing_extensions import TypedDict
 import os
 from google import genai
 from google.genai import types
-
 from ..tools.buildins.core import (
     create_work_plan,
     read_memory,
@@ -103,6 +104,33 @@ You have two transfer patterns to choose from:
 </transfer-to-subagent-rule>
 """.strip()
 
+
+class GenaiStuffDict(TypedDict, total=False):
+    system_instruction: Optional[str]
+    vertexai: Optional[bool]
+    vertexai_project: Optional[str]
+    vertexai_location: Optional[str]
+    google_ai_studio_api_key: Optional[str]
+    http_options: Optional[types.HttpOptions]
+
+
+GENAI_STUFF_DEFAULTS: GenaiStuffDict = {
+    "system_instruction": SYSTEM_INSTRUCTION,
+    "http_options": types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=3)),
+}
+
+
+class OllamaStuffDict(TypedDict, total=False):
+    system_instruction: Optional[str]
+    think: Optional[bool | str]
+
+
+OLLAMA_STUFF_DEFAULTS: OllamaStuffDict = {
+    "system_instruction": SYSTEM_INSTRUCTION,
+    "think": True,
+}
+
+
 class TinyAgent:
     def __init__(
         self,
@@ -111,14 +139,8 @@ class TinyAgent:
         output_root: str,
         tools: list[Callable] = list(),
         subagents: list["TinyAgent"] = list(),
-        system_instruction: str = SYSTEM_INSTRUCTION,
-        vertexai: bool = True,
-        vertexai_project: str = None,
-        vertexai_location: str = None,
-        google_ai_studio_api_key=None,
-        http_options: types.HttpOptions = types.HttpOptions(
-            retry_options=types.HttpRetryOptions(attempts=3),
-        ),
+        genai_stuff: GenaiStuffDict = None,
+        ollama_stuff: OllamaStuffDict = None,
         **kwargs,
     ):
         """
@@ -142,42 +164,63 @@ class TinyAgent:
         if not output_root:
             # Output root is required
             raise ValueError("Output root is required")
-        if vertexai and not (vertexai_project and vertexai_location):
+
+        if genai_stuff is None and ollama_stuff is None:
+            raise ValueError("genai_stuff or ollama_stuff must be provided")
+        if genai_stuff is not None and ollama_stuff is not None:
             raise ValueError(
-                "vertexai_project and vertexai_location must be provided when vertexai is True"
+                "genai_stuff and ollama_stuff cannot be provided at the same time"
             )
-        if not vertexai and not google_ai_studio_api_key:
-            raise ValueError(
-                "google_ai_studio_api_key must be provided when vertexai is False"
-            )
-        
-        self.is_subagent = hasattr(self, '_is_async')
-        
-        self.vertexai = vertexai
-        self.vertexai_project = vertexai_project
-        self.vertexai_location = vertexai_location
-        self.google_ai_studio_api_key = google_ai_studio_api_key
+
+        if genai_stuff:
+            if genai_stuff.get("vertexai") and not (
+                genai_stuff.get("vertexai_project")
+                and genai_stuff.get("vertexai_location")
+            ):
+                raise ValueError(
+                    "vertexai_project and vertexai_location must be provided when vertexai is True"
+                )
+            if not genai_stuff.get("vertexai") and not genai_stuff.get(
+                "google_ai_studio_api_key"
+            ):
+                raise ValueError(
+                    "google_ai_studio_api_key must be provided when vertexai is False"
+                )
+            self.genai_stuff = {**GENAI_STUFF_DEFAULTS, **genai_stuff}
+
+        if ollama_stuff:
+            if not ollama_stuff.get("model"):
+                raise ValueError("model must be provided when using ollama")
+            self.ollama_stuff = {**OLLAMA_STUFF_DEFAULTS, **ollama_stuff}
+
+        self.is_subagent = hasattr(self, "_is_async")
+
         longst_int_time = int(time.time() * 1000000)
         self.agent_id = f"{longst_int_time}-{str(uuid.uuid4())}"
         self.name = name
         self.model = model
         self.output_root = output_root
         self.output_location = f"{self.output_root}/{self.name}-{self.agent_id}"
-        self.client = genai.Client(
-            **(
-                {
-                    "vertexai": self.vertexai,
-                    "project": self.vertexai_project,
-                    "location": (
-                        "global" if "-preview" in model else self.vertexai_location
-                    ),
-                }
-                if self.vertexai
-                else {
-                    "api_key": self.google_ai_studio_api_key,
-                }
-            ),
-        )
+
+        if self.genai_stuff:
+            self.client = genai.Client(
+                **(
+                    {
+                        "vertexai": self.genai_stuff["vertexai"],
+                        "project": self.genai_stuff["vertexai_project"],
+                        "location": (
+                            "global"
+                            if "-preview" in model
+                            else self.genai_stuff["vertexai_location"]
+                        ),
+                    }
+                    if self.genai_stuff.get("vertexai")
+                    else {
+                        "api_key": self.genai_stuff["google_ai_studio_api_key"],
+                    }
+                ),
+            )
+
         builtin_tools = [
             create_work_plan,
             update_work_plan,
@@ -211,21 +254,24 @@ class TinyAgent:
                 self.tools.append(tool_copy)
             else:
                 self.tools.append(tool_func)
-        self.config = types.GenerateContentConfig(
-            **{
+        if self.genai_stuff:
+            self.genai_stuff["config"] = types.GenerateContentConfig(
                 **{
-                    "http_options": http_options,
-                    "tools": self.tools,
-                    "system_instruction": system_instruction,
-                    "automatic_function_calling": types.AutomaticFunctionCallingConfig(
-                        disable=False,
-                        maximum_remote_calls=99999999,
-                        ignore_call_history=False,
-                    ),
-                },
-                **kwargs,
-            }
-        )
+                    **{
+                        "http_options": self.genai_stuff.get("http_options"),
+                        "tools": self.tools,
+                        "system_instruction": self.genai_stuff.get(
+                            "system_instruction", SYSTEM_INSTRUCTION
+                        ),
+                        "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+                            disable=False,
+                            maximum_remote_calls=99999999,
+                            ignore_call_history=False,
+                        ),
+                    },
+                    **kwargs,
+                }
+            )
         self.subagents = self._append_subagents(dict(), subagents)
         AgentManager().register(self)
 
@@ -295,16 +341,18 @@ class TinyAgent:
     def subagents_count(self) -> int:
         return len(self.subagents)
 
-    def __call__(self, contents, **kwargs) -> types.GenerateContentResponse:
+    def __call__(
+        self, contents, **kwargs
+    ) -> types.GenerateContentResponse | ChatResponse:
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
             contents: The contents to pass to the agent.
             **kwargs: A dict try to override the current modelconfig.
         """
-        if kwargs:
-            self.config = types.GenerateContentConfig(
-                **{**self.config.model_dump(exclude_none=True), **kwargs}
+        if kwargs and self.genai_stuff:
+            self.genai_stuff["config"] = types.GenerateContentConfig(
+                **{**self.genai_stuff["config"].model_dump(exclude_none=True), **kwargs}
             )
 
         prompt = f"""
@@ -316,9 +364,12 @@ class TinyAgent:
 
 {SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=self.config,
-        )
-        return response
+        if self.genai_stuff:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=self.genai_stuff["config"],
+            )
+            return response
+        else:
+            raise ValueError("genai_stuff is not provided")

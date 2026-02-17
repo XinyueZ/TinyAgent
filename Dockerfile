@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     apt-transport-https \
     ca-certificates \
+    zstd \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +29,13 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
     | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg \
     && apt-get update && apt-get install -y google-cloud-cli \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Ollama defaults
+ENV OLLAMA_HOST=0.0.0.0:11434
+ENV OLLAMA_MODELS=/root/.ollama/models
 
 # Set working directory
 WORKDIR /app

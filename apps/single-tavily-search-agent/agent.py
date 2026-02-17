@@ -126,7 +126,7 @@ if __name__ == "__main__":
         model=_MAIN_AGENT_MODEL,
         output_root=args.output,
         tools=[tavily_search, google_search],
-        **{**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
+        genai_stuff={**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
     )
 
     full_task = get_main_agent_goal(

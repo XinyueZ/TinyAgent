@@ -134,19 +134,19 @@ class DeepAgentsResearch:
             model=main_agent_model,
             output_root=output_root,
             subagents=[
-                    DeepResearchAgent(
-                        name=f"cowork_researcher_{i}",
-                        model=self.research_agent_model,
-                        output_root=self.output_root,
-                        tools=self.research_tools,
-                        **{
-                            **self.research_agent_model_config,
-                            **self.research_agent_provider,
-                        },
-                    )
-                    for i in range(self._get_cpu_core_count())
+                DeepResearchAgent(
+                    name=f"cowork_researcher_{i}",
+                    model=self.research_agent_model,
+                    output_root=self.output_root,
+                    tools=self.research_tools,
+                    genai_stuff={
+                        **self.research_agent_model_config,
+                        **self.research_agent_provider,
+                    },
+                )
+                for i in range(self._get_cpu_core_count())
             ],
-            **{**main_agent_model_config, **main_provider},
+            genai_stuff={**main_agent_model_config, **main_provider},
         )
 
     def _get_cpu_core_count(self):

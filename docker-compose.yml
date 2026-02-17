@@ -6,14 +6,27 @@ services:
       dockerfile: Dockerfile
     image: tiny-agent-io:latest
     container_name: TinyAgentDev
+    mem_limit: 64g
+    memswap_limit: 128g
     volumes:
       - .:/app
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
     env_file:
       - ./apps/.env
     working_dir: /app
     stdin_open: true
     tty: true
-    entrypoint: ["/bin/bash"]
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        ollama serve >/tmp/ollama.log 2>&1 &
+        until curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; do
+          sleep 1
+        done
+        echo "[TinyAgentDev] Ollama is ready at http://127.0.0.1:11434"
+        exec tail -f /dev/null
 
   deep-research-multi-agents-tool-tavily-search:
     build:
@@ -75,3 +88,6 @@ services:
       - ./apps/.env
     working_dir: /app
     entrypoint: ["python", "apps/app-builder/app-builder.py"]
+
+volumes:
+  ollama_data:
