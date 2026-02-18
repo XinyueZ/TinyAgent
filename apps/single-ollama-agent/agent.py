@@ -121,7 +121,7 @@ if __name__ == "__main__":
         name="main_agent",
         model=_OLLAMA_MODEL,
         output_root=args.output,
-        tools=[google_search],
+        tools=[google_search, tavily_search],
         ollama_stuff={**_OLLAMA_MODEL_CONFIG, **_OLLAMA_CONFIG},
     )
 

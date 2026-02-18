@@ -47,7 +47,7 @@ INSTRUCTIONS = """
 Complete task based on <instruction>.
 
 <instruction>
-- **Always** Before starting work, use create_work_plan to create a work-plan that outlines each step required to complete the task.
+- **Always** At the very beginning, use create_work_plan to create a work-plan that outlines each step required to complete the task.
 - **Always** Execute the steps in the work-plan **STEP-BY-STEP aka. ONE-BY-ONE**.
 - **Always** use update_memory to record your actions after calling any tool or receiving response. **WARNING**: This does not include work-plan (step status) update actions, as work-plan has its own separate isolated storage mechanism.
 - After completing a step of the work-plan, **always** use update_work_plan to update the status of that step in work-plan.   
