@@ -2,6 +2,8 @@ from . import create_tavily_search, create_google_search
 from tiny_agent.tools.decorator import tool
 import os
 import time
+import threading
+import fcntl
 from apps import (
     PROVIDER_CONFIG,
     SEARCH_AGENT_MODEL,
@@ -9,6 +11,8 @@ from apps import (
     SUMMARIZE_MODEL,
     SUMMARIZE_MODEL_CONFIG,
 )
+
+_tavily_key_lock = threading.Lock()
 
 
 @tool()
@@ -31,10 +35,31 @@ def tavily_search(query: str) -> str:
         return max(count, 1)
 
     api_key_count = _get_tavily_api_key_count()
-    now_long_int = int(time.time())
+
+    counter_path = os.getenv(
+        "TAVILY_KEY_COUNTER_FILE", "/tmp/tiny_agent_tavily_key_counter"
+    )
+    with _tavily_key_lock:
+        os.makedirs(os.path.dirname(counter_path), exist_ok=True)
+        with open(counter_path, "a+") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.seek(0)
+                raw = f.read().strip()
+                counter = int(raw) if raw else 0
+                start_index = counter % api_key_count
+                counter += 1
+                f.seek(0)
+                f.truncate()
+                f.write(str(counter))
+                f.flush()
+                os.fsync(f.fileno())
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
     for i in range(3):
         try:
-            key_index = (now_long_int + i) % api_key_count
+            key_index = (start_index + i) % api_key_count
             api_key = os.getenv(f"TAVILY_API_KEY_{key_index}")
             tavily_search = create_tavily_search(
                 api_key=api_key,
