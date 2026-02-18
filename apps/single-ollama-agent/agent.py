@@ -21,9 +21,9 @@ _OLLAMA_CONFIG = {
     ),
 }
 
-_OLLAMA_MODEL = "glm-5:cloud"  # "qwen3:32b"  # glm-5:cloud "glm-4.7-flash:bf16" "qwen3:1.7b"#  "qwen3:8b" "qwen3:8b"
+_OLLAMA_MODEL = "glm-5:cloud"  # "glm-4.7-flash:latest" "qwen3:32b"  # glm-5:cloud "glm-4.7-flash:bf16" "qwen3:1.7b"#  "qwen3:8b" "qwen3:8b"
 _OLLAMA_MODEL_CONFIG = {
-    "think": "low",  # 'low', 'medium', 'high' or true, false
+    "think": "high",  # 'low', 'medium', 'high' or true, false
     "options": {
         "temperature": 0.5,
         "top_p": 0.5,

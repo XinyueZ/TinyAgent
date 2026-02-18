@@ -2,6 +2,7 @@ from ollama import ChatResponse
 import time
 import uuid
 from functools import wraps
+import threading
 from typing import Callable, Optional
 from typing_extensions import TypedDict
 import os
@@ -201,6 +202,8 @@ class TinyAgent:
 
         self.is_subagent = hasattr(self, "_is_async")
 
+        self._owner_thread_id = threading.get_ident()
+
         longst_int_time = int(time.time() * 1000000)
         self.agent_id = f"{longst_int_time}-{str(uuid.uuid4())}"
         self.name = name
@@ -375,9 +378,10 @@ class TinyAgent:
             contents: The contents to pass to the agent.
             **kwargs: A dict try to override the current modelconfig.
         """
-        if kwargs and self.genai_stuff:
-            self.genai_stuff["config"] = types.GenerateContentConfig(
-                **{**self.genai_stuff["config"].model_dump(exclude_none=True), **kwargs}
+
+        if threading.get_ident() != self._owner_thread_id:
+            raise RuntimeError(
+                "TinyAgent instance is not thread-safe; calling __call__ from a different thread is not allowed"
             )
 
         prompt = f"""
@@ -393,6 +397,14 @@ class TinyAgent:
 """.strip()
 
         if self.genai_stuff:
+            if kwargs:
+                self.genai_stuff["config"] = types.GenerateContentConfig(
+                    **{
+                        **self.genai_stuff["config"].model_dump(exclude_none=True),
+                        **kwargs,
+                    }
+                )
+
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=prompt,
@@ -401,6 +413,18 @@ class TinyAgent:
             return response
 
         if self.ollama_stuff:
+            if kwargs:
+                from functools import partial
+
+                self.ollama_stuff["config"] = partial(
+                    ollama_automatic_function_calling,
+                    self.client.chat,
+                    model=self.model,
+                    max_turns=99999999,
+                    tools=self.tools,
+                    **kwargs,
+                )
+
             messages = [
                 {"role": "system", "content": self.ollama_stuff["system_instruction"]},
                 {"role": "user", "content": prompt},
