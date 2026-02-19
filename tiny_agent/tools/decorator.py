@@ -3,6 +3,7 @@ import os
 from contextvars import ContextVar
 from functools import wraps
 from typing import Callable, Optional
+
 from ..utils.print_utils import format_text
 
 # Context variable for implicit context passing to decorated functions
@@ -84,7 +85,30 @@ def default_tool_extra_fun(
     return format_str
 
 
-def tool(extra_fn: Callable = default_tool_extra_fun):
+DEFAULT_TOOL_EXTRA_PROMPT = """
+**Response from this tool:**
+{result} 
+
+**Information about the agent using this tool:**
+{agent_info}
+
+**Information about the mechanism calling this tool:**
+{caller_info}
+
+**Here are all the interaction records (aka. the conversation history, memory, i.e., past information) so far; continue to work based on these records:**
+
+- Work-plan: Record of the work-plan and the status of each step
+- Memory: Record of the memory of the entire interaction **history** so far 
+
+Here are the interaction records so far:
+{extra}
+"""
+
+
+def tool(
+    extra_fn: Callable = default_tool_extra_fun,
+    extra_fn_prompt: str = DEFAULT_TOOL_EXTRA_PROMPT,
+):
     """Decorator that automatically appends interaction history to tool return values.
 
     Thread safety:
@@ -137,11 +161,29 @@ def tool(extra_fn: Callable = default_tool_extra_fun):
             token = _tool_context.set(context)
             try:
                 result = func(*args, **kwargs)
-                extra_fn(func.__name__, caller_info, agent_info)
+                extra = extra_fn(func.__name__, caller_info, agent_info)
             finally:
                 _tool_context.reset(token)
 
-            return result
+            raw_response = extra_fn_prompt.format(
+                result=result,
+                agent_info=agent_info,
+                caller_info=caller_info,
+                extra=extra,
+            )
+            if int(os.getenv("VERBOSE", "0")) > 1:
+                format_text(
+                    raw_response,
+                    f"⌭ [Agent] {agent_info.get('agent_name', 'unknown')} | [Tool] {func.__name__} | Raw response",
+                    "cyan",
+                )
+            return {
+                "tool_response": result,
+                "extra": extra,
+                "caller_info": caller_info,
+                "agent_info": agent_info,
+                "raw_response": raw_response,
+            }
 
         # Initialize agent info attribute
         wrapper._agent_info = None

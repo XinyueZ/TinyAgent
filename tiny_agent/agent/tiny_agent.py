@@ -86,15 +86,18 @@ Complete task based on <instruction>.
 """.strip()
 
 STORAGE_INSTRUCTION = """
-We have the following storage mechanisms:
+We have the following storage mechanisms in filesystem:
 <storage-instruction>
 Work-plan storage: {work_plan_storage}
 Memory storage: {memory_storage}
 Reflection storage: {reflection_storage}
+Are you a subagent? {is_subagent}, 
+- if **yes (true)**, you have storage to save your work result: {subagent_result_storage}
+- if **no (false)**, the work-result storage could be specified by the user based on the task description.
 </storage-instruction>
 """
 
-SUB_AGENTS_FOOTNOTE = """
+SUB_AGENTS_FOOTNOTE = """*
 You have the following subagents that can help you:
 {subagents}
 
@@ -111,6 +114,9 @@ You have two transfer patterns to choose from:
    - If they depend on each other → use `transfer_to_subagent` (ONE-TO-ONE) sequentially.
 3. Why shall I transfer the task to certain sub-agent(s)?
 4. Is the task description clear and complete? If not, update the task description before transferring.
+
+**Always**: Wait until all sub-agents have completed their tasks before proceeding next step.
+**Always**: When transferring, introduce yourself clearly: "I am [xxxxxx]. My task or row is [yyyyy], now I need [specific request]..."
 </transfer-to-subagent-rule>
 """.strip()
 
@@ -357,10 +363,41 @@ class TinyAgent:
                 raise ValueError(
                     f"Subagent name '{subagent.name}' cannot be the same as the parent agent name"
                 )
+            for existing_name in builtin_subagents:
+                if subagent.name == existing_name:
+                    raise ValueError(
+                        f"Subagent name '{subagent.name}' conflicts with an existing subagent"
+                    )
+            for other_subagent in upcoming_subagents:
+                if (
+                    subagent is not other_subagent
+                    and subagent.name == other_subagent.name
+                ):
+                    raise ValueError(
+                        f"Duplicate subagent name '{subagent.name}' found in upcoming subagents"
+                    )
+
         return {
             **builtin_subagents,
             **{subagent.name: subagent for subagent in upcoming_subagents},
         }
+
+    def append_subagents(self, subagent: "TinyAgent"):
+        if not isinstance(subagent, TinyAgent):
+            raise TypeError(f"{subagent} is not a TinyAgent instance")
+        if not hasattr(subagent, "_is_async"):
+            raise TypeError(
+                f"{subagent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
+            )
+        if subagent.name == self.name:
+            raise ValueError(
+                f"Subagent name '{subagent.name}' cannot be the same as the parent agent name"
+            )
+
+        if subagent.name in self.subagents:
+            raise ValueError(f"Subagent name '{subagent.name}' already exists")
+
+        self.subagents[subagent.name] = subagent
 
     def get_subagent_by_name(self, name: str) -> Optional["TinyAgent"]:
         return self.subagents.get(name)
@@ -391,7 +428,7 @@ class TinyAgent:
            
 {INSTRUCTIONS}
 
-{STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"))}
+{STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"), is_subagent=self.is_subagent, subagent_result_storage=os.path.join(self.output_location, "result.md") if self.is_subagent else "")}
 
 {SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()
