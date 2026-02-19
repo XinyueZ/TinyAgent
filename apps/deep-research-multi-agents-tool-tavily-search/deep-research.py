@@ -10,7 +10,7 @@ from google.genai import types
 
 from tiny_agent.tools.decorator import *
 from tiny_agent.tools.web.tools import google_search, tavily_search
-from tiny_agent.use_cases.deep_research_multi_agents_tool import (
+from tiny_agent.patterns.deep_research_multi_agents_tool import (
     DeepResearchMultAgentsTool,
 )
 from tiny_agent.utils.print_utils import format_text

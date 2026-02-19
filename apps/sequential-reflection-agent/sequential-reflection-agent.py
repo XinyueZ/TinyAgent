@@ -11,7 +11,7 @@ from google.genai import types
 
 from tiny_agent.tools.web.tools import google_search, tavily_search
 from tiny_agent.utils.print_utils import format_text
-from tiny_agent.use_cases.sequential_reflection_agent import SequentialReflectionAgent
+from tiny_agent.patterns.sequential_reflection_agent import SequentialReflectionAgent
 
 load_dotenv()
 

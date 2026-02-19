@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tiny_agent.use_cases import NUM_RESEARCHER_RESULTS
+from tiny_agent.patterns import NUM_RESEARCHER_RESULTS
 
 from ..tools.decorator import *
 from ..agent.tiny_agent import TinyAgent

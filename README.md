@@ -571,7 +571,7 @@ During execution, agents produce several files in the `--output` directory. Thes
 > **⚠️ Warning**
 >
 > - The file names listed above are **sensitive** — they are hardcoded in the agent's built-in tools. Do not rename them.
-> - Each agent writes to its own `output_location` directory (pattern: `<--output>/<agent-name>-<agent-id>/`). To locate a specific artifact, use `output_location` + the file name (e.g. `output_location/result.md`). See how `output_path` is constructed in `apps/single-tavily-search-agent/agent.py` and `tiny_agent/use_cases/deep_research_multi_agents_tool.py` for reference.
+> - Each agent writes to its own `output_location` directory (pattern: `<--output>/<agent-name>-<agent-id>/`). To locate a specific artifact, use `output_location` + the file name (e.g. `output_location/result.md`). **Note:** `subagent`s have a default `result.md` output, but a plain `TinyAgent` does not enforce a default result filename at the framework level. In this repo we intentionally standardize on `result.md`: in `tiny_agent/patterns/` (except the sequential reflection pattern) you can see `output_path` being constructed explicitly as `f"{agent.output_location}/result.md"` (e.g. `tiny_agent/patterns/deep_research_multi_agents_tool.py`), and the single-agent apps also set `result.md` from the outside (e.g. `apps/single-tavily-search-agent/agent.py` and `apps/single-ollama-agent/agent.py`). The sequential reflection agent's subagents rely on the default `result.md`.
 > - **Not all files are guaranteed to appear.** Different models have varying performance — if an agent fails or the model does not follow the expected tool-calling pattern, some artifacts (e.g. `work_plan.md`, `reflection.md`) may be missing from the output.
 
 ---
