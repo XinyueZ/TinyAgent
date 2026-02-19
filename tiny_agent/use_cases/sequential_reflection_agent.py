@@ -39,11 +39,11 @@ class AgentCriticalAnalysis(TinyAgent):
     """
     You are responsible for critiquing and validating the results against user requirements from the sibling who performed regression and analysis.
     During this process, you may utilize any available web search or internet query tools to assist your critique and validation.
-    After you finish your critique and validation, transfer your findings to the sibling responsible for revision.
+    After you finish your critique and validation, transfer your findings to the sibling responsible for **revision**.
     You must provide:
     1. Original findings from the sibling who performed regression and analysis
     2. Your critique and validation
-    3. Your argument for why the findings are correct or incorrect, and a request for revision if needed
+    3. Your argument for why the findings are correct or incorrect, and a request for revision **if needed**
     """
 
     ...
@@ -52,11 +52,11 @@ class AgentCriticalAnalysis(TinyAgent):
 @subagent(is_async=False)
 class AgentRevision(TinyAgent):
     """
-    You are responsible for performing revisions based on the critique and validation from the sibling who performed critical analysis.
+    You are responsible for performing revisions (if needed) based on the critique and validation from the sibling who performed critical analysis.
     Provide your revised results that you consider credible and reliable.
     During this process, you may utilize any available web search or internet query tools to assist your analysis.
     **Always**: Keep it concise and avoid excessive perfectionism that wastes time. Aim for brevity.
-    **Always transfer** all your revised results to the sibling who composes the final report.
+    **Always transfer** all your revised results to the sibling who can compose the final report.
 
     In your results, please provide:
     - **Topic**: The name of each research topic
@@ -72,13 +72,24 @@ class AgentRevision(TinyAgent):
 @subagent(is_async=False)
 class AgentComposeReport(TinyAgent):
     """
-    You compose the report in markdown format, respond to the user with the final report, and save the report to the default storage.
+    You compose the report in markdown format based on the source, 
+    respond to the user with the final report, 
+    and save the report to the default result storage.
     """
 
     ...
 
 
 class SequentialReflectionAgent:
+    """
+    A sequential reflection agent that performs research through the order of stages:
+    1. Starter - Initial research and analysis
+    2. Regression and Analysis - Deep dive into findings
+    3. Critical Analysis - Validate and critique findings
+    4. Revision - Revise based on critique
+    5. Compose Report - Final report composition
+    """
+    
     def __init__(
         self,
         output: str,

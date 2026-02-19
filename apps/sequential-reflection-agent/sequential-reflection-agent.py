@@ -72,7 +72,7 @@ _AGENT_CRITICAL_ANALYSIS_MODEL_CONFIG = {
     ),
 }
 
-_AGENT_COMPOSE_REPORT_MODEL = "gemini-2.5-flash-lite"
+_AGENT_COMPOSE_REPORT_MODEL = "gemini-2.5-flash"
 _AGENT_COMPOSE_REPORT_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,

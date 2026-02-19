@@ -208,9 +208,10 @@ finally:
 | App | Backend | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
 |-----|---------|-------------|-----------------|-----------------|
 | `apps/single-tavily-search-agent` | Google GenAI | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
-| `apps/single-ollama-agent` | Ollama | Single agent with web search via Ollama | `cd apps/single-ollama-agent`<br>`python ./agent.py --output ./agent-output --tasks ./tasks`<br>[More ↓](#run-inside-container) | — |
+| `apps/single-ollama-agent` | Ollama | Single agent with web search via Ollama | `cd apps/single-ollama-agent`<br>`python ./agent.py --output ./agent-output --tasks ./tasks`<br>[More ↓](#run-inside-container) | `CLIs/single-ollama-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-research-multi-agents-tool-tavily-search` | Google GenAI | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-agents-research` | Google GenAI | Deep agents research with a lead agent coordinating multiple sub-agents | `cd apps/deep-agents-research`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-agents-research.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/sequential-reflection-agent` | Google GenAI | Sequential agent that runs step-by-step with analysis, reflection, revision, and a final compose-report stage | `cd apps/sequential-reflection-agent`<br>`python ./sequential-reflection-agent.py --output ./sequential-reflection-agent-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/sequential-reflection-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/app-builder` | Google GenAI | Builds a CLI `.sh` script for any app given the path to its main file. Takes `--main` pointing to the app's entry-point `.py` file, reads its `argparse` definition, references existing `CLIs/*.sh` scripts, and generates a new matching `.sh` under `CLIs/`. 👍 The `CLIs/app-builder.sh` script itself was built by this app! | `cd apps/app-builder`<br>`python ./app-builder.py --main /path/to/apps/my-app/main.py`<br>[More ↓](#run-inside-container) | `CLIs/app-builder.sh`<br>`--main /path/to/apps/my-app/main.py`<br>[More ↓](#run-from-host) |
 
 - `--output` (required): Output directory for results.
@@ -323,6 +324,14 @@ python ./agent.py --output ./agent-output --tasks /path/to/labubuVShellokitty
 cd apps/deep-research-multi-agents-tool-tavily-search
 python ./deep-research.py --output ./deep-research-output --tasks /path/to/labubuVShellokitty
 
+# Deep agents research
+cd apps/deep-agents-research
+python ./deep-research.py --output ./deep-agents-research-output --tasks /path/to/labubuVShellokitty
+
+# Sequential reflection agent
+cd apps/sequential-reflection-agent
+python ./sequential-reflection-agent.py --output ./sequential-reflection-agent-output --tasks /path/to/labubuVShellokitty
+
 # App builder
 cd apps/app-builder
 python ./app-builder.py --main /path/to/apps/my-app/main.py
@@ -336,8 +345,17 @@ cd labubuVShellokitty
 # Deep research
 .../TinyAgent/CLIs/deep-research-multi-agents-tool-tavily-search.sh --output deep-research-multi-agents-tool-tavily-search --tasks .
 
+# Deep agents research
+.../TinyAgent/CLIs/deep-agents-research.sh --output deep-agents-research --tasks .
+
+# Sequential reflection agent
+.../TinyAgent/CLIs/sequential-reflection-agent.sh --output sequential-reflection-agent --tasks .
+
 # Or single agent
 .../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
+
+# Or single ollama agent
+.../TinyAgent/CLIs/single-ollama-agent.sh --output single-ollama-agent/ --tasks .
 
 # App builder
 .../TinyAgent/CLIs/app-builder.sh --main /path/to/apps/my-app/main.py
