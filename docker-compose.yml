@@ -89,6 +89,21 @@ services:
     working_dir: /app
     entrypoint: ["python", "apps/single-ollama-agent/agent.py"]
 
+  sequential-reflection-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/sequential-reflection-agent/sequential-reflection-agent.py"]
+
   app-builder:
     build:
       context: .

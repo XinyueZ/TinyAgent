@@ -129,7 +129,8 @@ class DeepResearchMultAgentsTool:
             model=main_agent_model,
             output_root=output_root,
             tools=[self._create_deep_research_tool()],
-            genai_stuff={**main_agent_model_config, **main_provider},
+            genai_stuff=main_provider,
+            **main_agent_model_config,
         )
 
     def _get_cpu_core_count(self):
@@ -163,10 +164,8 @@ class DeepResearchMultAgentsTool:
                     model=self.research_agent_model,
                     output_root=self.output_root,
                     tools=self.research_tools,
-                    genai_stuff={
-                        **self.research_agent_model_config,
-                        **self.research_agent_provider,
-                    },
+                    genai_stuff=self.research_agent_provider,
+                    **self.research_agent_model_config,
                 )
                 output_path = f"{sub_agent.output_location}/result.md"
                 sub_agent(
