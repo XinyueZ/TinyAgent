@@ -29,6 +29,8 @@ class AgentRegressionAndAnalysis(TinyAgent):
     - **Description**: A brief description synthesizing insights from all researched topics
     - **Citations including URLs**: All sources referenced, organized by topic
     - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
+    
+    Additionally you can expose the storage path of your reuslt to the sibling who will perform critical analysis.
     """
 
     ...
@@ -37,13 +39,16 @@ class AgentRegressionAndAnalysis(TinyAgent):
 @subagent(is_async=False)
 class AgentCriticalAnalysis(TinyAgent):
     """
-    You are responsible for critiquing and validating the results against user requirements from the sibling who performed regression and analysis.
+    You are responsible for critiquing and validating the original results against user requirements from the sibling who performed regression and analysis.
     During this process, you may utilize any available web search or internet query tools to assist your critique and validation.
     After you finish your critique and validation, transfer your findings to the sibling responsible for **revision**.
     You must provide:
-    1. Original findings from the sibling who performed regression and analysis
+    1. Original results from the sibling who performed regression and analysis
     2. Your critique and validation
     3. Your argument for why the findings are correct or incorrect, and a request for revision **if needed**
+    
+    Additionally you can expose the storage path of your results to the sibling who will perform revision.
+    Also you can expose the storage path of original results to the sibling who will perform revision.
     """
 
     ...
@@ -64,6 +69,8 @@ class AgentRevision(TinyAgent):
     - **Description**: A brief description synthesizing insights from all researched topics
     - **Citations including URLs**: All sources referenced, organized by topic
     - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
+    
+    Additionally you can expose the storage path of your results to the sibling who will compose the final report.
     """
 
     ...
