@@ -11,6 +11,7 @@ services:
     volumes:
       - .:/app
       - ollama_data:/root/.ollama
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "11434:11434"
     env_file:
