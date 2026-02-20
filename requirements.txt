@@ -9,3 +9,4 @@ ipykernel==6.29.5
 streamlit==1.54.0
 ollama==0.6.1
 docker==7.1.0
+yfinance==1.2.0

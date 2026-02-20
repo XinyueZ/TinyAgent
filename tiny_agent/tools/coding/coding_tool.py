@@ -12,15 +12,26 @@ from tiny_agent.utils.docker_sandbox import DockerSandboxRunner, SandboxError, S
 
 @tool()
 def run_python_code(code_str: str) -> Any:
+    """
+    Run Python code in a sandboxed environment.
+    
+    Args:
+        code_str: The Python code to execute
+        
+    Returns:
+        The result of the code execution
+    """
     if not isinstance(code_str, str) or not code_str.strip():
         raise ValueError("code_str must be a non-empty string")
 
     ctx = get_tool_context() or {}
     agent_info = ctx.get("agent_info") or {}
     agent_id = agent_info.get("agent_id", "unknown")
+    agent_name = agent_info.get("agent_name", "unknown")
 
-    run_id = f"{int(time.time())}-{agent_id}-{uuid4().hex[:8]}"
-    base_dir = Path("/app/sandbox") / "code" / run_id
+    run_root = f"{agent_name}-{agent_id}"
+    run_id = f"{int(time.time() * 1000000)}-{str(uuid4())}"
+    base_dir = Path("/app/sandbox") / "run_python_code" / run_root / run_id
     input_dir = base_dir / "input"
     output_dir = base_dir / "output"
     input_dir.mkdir(parents=True, exist_ok=True)

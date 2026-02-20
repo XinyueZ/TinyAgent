@@ -191,3 +191,81 @@ def tool(
         return wrapper
 
     return decorator
+
+
+class _CodingToolCallable:
+    def __init__(self, tool_func: Callable, original_func: Callable):
+        self._tool_func = tool_func
+        self._original_func = original_func
+
+        self.__wrapped__ = getattr(tool_func, "__wrapped__", original_func)
+        self.__name__ = getattr(
+            tool_func, "__name__", getattr(original_func, "__name__", "")
+        )
+        self._agent_info = getattr(tool_func, "_agent_info", None)
+
+    def __call__(self, *args, **kwargs):
+        return self._tool_func(*args, **kwargs)
+
+    def __getattr__(self, name: str):
+        return getattr(self._tool_func, name)
+
+    def __str__(self) -> str:
+        func = self._original_func
+        try:
+            source = inspect.getsource(func)
+        except Exception:
+            source = repr(func)
+
+        lines = source.splitlines()
+        i = 0
+        while i < len(lines):
+            stripped = lines[i].lstrip()
+            if stripped.startswith("@"):  # decorator line
+                i += 1
+                continue
+            if stripped == "":
+                i += 1
+                continue
+            break
+
+        return "\n".join(lines[i:]).rstrip()
+
+
+def coding_tool(
+    extra_fn: Callable = default_tool_extra_fun,
+    extra_fn_prompt: str = DEFAULT_TOOL_EXTRA_PROMPT,
+):
+    """Like @tool(), but `str(tool_func)` prints full source.
+
+    Can be stacked with @tool(). Recommended order:
+        @coding_tool()
+        @tool()
+        def f(...):
+            ...
+
+    (If @tool() is the outer decorator, the resulting object is a plain function wrapper,
+    and Python's `str()` will not use instance-level overrides.)
+
+    Example:
+        @coding_tool()
+        def add(a: int, b: int) -> int:
+            return a + b
+
+        print(str(add))
+        # -> "def add(a: int, b: int) -> int:\n    return a + b\n"
+    """
+
+    def decorator(func: Callable):
+        if isinstance(func, _CodingToolCallable):
+            return func
+
+        original = inspect.unwrap(func)
+
+        if hasattr(func, "_agent_info"):
+            return _CodingToolCallable(func, original)
+
+        wrapped = tool(extra_fn=extra_fn, extra_fn_prompt=extra_fn_prompt)(func)
+        return _CodingToolCallable(wrapped, original)
+
+    return decorator

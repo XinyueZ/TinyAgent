@@ -1,13 +1,15 @@
-from ollama import ChatResponse
+import copy
+import os
+import threading
 import time
 import uuid
 from functools import wraps
-import threading
 from typing import Callable, Optional
-from typing_extensions import TypedDict
-import os
+
 from google.genai import types
-from .ollama_utils import ollama_automatic_function_calling
+from ollama import ChatResponse
+from typing_extensions import TypedDict
+
 from ..tools.buildins.core import (
     create_work_plan,
     read_memory,
@@ -33,17 +35,21 @@ from ..tools.buildins.utils import (
 )
 from ..tools.decorator import _agent_info_context
 from .agent_manager import AgentManager
+from .ollama_utils import ollama_automatic_function_calling
 
 MAX_RETRY_ATTEMPTS = 5
+
 SYSTEM_INSTRUCTION = """
 You are an autonomous AI agent.
 """
-SUBAGENT_INSTRUCTION_SUFFIX = """
+
+SUBAGENT_HEADNOTE = """
 {subagent_instruction}
 **ALWAYS** when you have completed, please save the report to file: {output_path}
 **Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
 """
-INSTRUCTIONS = """
+
+AGENT_WORK_INSTRUCTIONS = """
 Complete task based on <instruction>.
 
 <instruction>
@@ -97,7 +103,7 @@ Are you a subagent? {is_subagent},
 </storage-instruction>
 """
 
-SUB_AGENTS_FOOTNOTE = """*
+SUBAGENTS_FOOTNOTE = """*
 You have the following subagents that can help you:
 {subagents}
 
@@ -147,15 +153,16 @@ OLLAMA_STUFF_DEFAULTS: OllamaStuffDict = {
 
 
 class TinyAgent:
+
     def __init__(
         self,
         name: str,
         model: str,
         output_root: str,
-        genai_stuff: GenaiStuffDict = None,
-        ollama_stuff: OllamaStuffDict = None,
-        tools: list[Callable] = list(),
-        subagents: list["TinyAgent"] = list(),
+        genai_stuff: GenaiStuffDict | None = None,
+        ollama_stuff: OllamaStuffDict | None = None,
+        tools: list[Callable] | None = None,
+        subagents: list["TinyAgent"] | None = None,
         **kwargs,
     ):
         """
@@ -185,6 +192,9 @@ class TinyAgent:
                 "genai_stuff and ollama_stuff cannot be provided at the same time"
             )
 
+        tools = tools or []
+        subagents = subagents or []
+
         self.genai_stuff = None
         if genai_stuff:
             if genai_stuff.get("vertexai") and not (
@@ -200,11 +210,11 @@ class TinyAgent:
                 raise ValueError(
                     "google_ai_studio_api_key must be provided when vertexai is False"
                 )
-            self.genai_stuff = {**GENAI_STUFF_DEFAULTS, **genai_stuff}
+            self.genai_stuff = {**self.get_default_genai_stuff(), **genai_stuff}
 
         self.ollama_stuff = None
         if ollama_stuff:
-            self.ollama_stuff = {**OLLAMA_STUFF_DEFAULTS, **ollama_stuff}
+            self.ollama_stuff = {**self.get_default_ollama_stuff(), **ollama_stuff}
 
         self.is_subagent = hasattr(self, "_is_async")
 
@@ -243,23 +253,7 @@ class TinyAgent:
 
             self.client = Client(host=self.ollama_stuff.get("host"))
 
-        builtin_tools = [
-            create_work_plan,
-            update_work_plan,
-            read_work_plan,
-            update_memory,
-            read_memory,
-            reflect,
-            list_dir,
-            read_file,
-            write_file,
-            append_to_file,
-            file_exists,
-            get_current_datetime_in_utc,
-            get_current_datetime_in_local,
-            transfer_to_subagent,
-            transfer_to_subagents,
-        ]
+        builtin_tools = self.get_buildin_tools()
         all_tools = self._append_tools(builtin_tools, tools)
         # Create independent copies of tools to avoid shared state in concurrent execution
         # Each TinyAgent gets its own copy with its own _agent_info
@@ -283,7 +277,7 @@ class TinyAgent:
                         "http_options": self.genai_stuff.get("http_options"),
                         "tools": self.tools,
                         "system_instruction": self.genai_stuff.get(
-                            "system_instruction", SYSTEM_INSTRUCTION
+                            "system_instruction"
                         ),
                         "automatic_function_calling": types.AutomaticFunctionCallingConfig(
                             disable=False,
@@ -306,7 +300,10 @@ class TinyAgent:
                 tools=self.tools,
                 **kwargs,
             )
-        self.subagents = self._append_subagents(dict(), subagents)
+
+        buildin_subagents = dict()
+        self.subagents = self._append_subagents(buildin_subagents, subagents)
+
         AgentManager().register(self)
 
     def _append_tools(
@@ -383,8 +380,6 @@ class TinyAgent:
         }
 
     def append_subagents(self, subagent: "TinyAgent"):
-        if not isinstance(subagent, TinyAgent):
-            raise TypeError(f"{subagent} is not a TinyAgent instance")
         if not hasattr(subagent, "_is_async"):
             raise TypeError(
                 f"{subagent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
@@ -406,13 +401,41 @@ class TinyAgent:
     def subagents_count(self) -> int:
         return len(self.subagents)
 
+    def get_buildin_tools(self) -> list[Callable]:
+        return [
+            create_work_plan,
+            update_work_plan,
+            read_work_plan,
+            update_memory,
+            read_memory,
+            reflect,
+            list_dir,
+            read_file,
+            write_file,
+            append_to_file,
+            file_exists,
+            get_current_datetime_in_utc,
+            get_current_datetime_in_local,
+            transfer_to_subagent,
+            transfer_to_subagents,
+        ]
+
+    def get_default_genai_stuff(self) -> GenaiStuffDict:
+        return copy.deepcopy(GENAI_STUFF_DEFAULTS)
+
+    def get_default_ollama_stuff(self) -> OllamaStuffDict:
+        return dict(OLLAMA_STUFF_DEFAULTS)
+
+    def wrap_contents(self, contents: str) -> str:
+        return contents
+
     def __call__(
-        self, contents, **kwargs
+        self, contents: str, **kwargs
     ) -> types.GenerateContentResponse | ChatResponse | None:
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
-            contents: The contents to pass to the agent.
+            contents: The contents string to pass to the agent.
             **kwargs: A dict try to override the current modelconfig.
         """
 
@@ -422,15 +445,15 @@ class TinyAgent:
             )
 
         prompt = f"""
-{SUBAGENT_INSTRUCTION_SUFFIX.format(subagent_instruction=self.__str__(), output_path=os.path.join(self.output_location, "result.md")) if self.is_subagent else ""}
+{SUBAGENT_HEADNOTE.format(subagent_instruction=self.__str__(), output_path=os.path.join(self.output_location, "result.md")) if self.is_subagent else ""}
 
-{contents}
+{self.wrap_contents(contents)}
            
-{INSTRUCTIONS}
+{AGENT_WORK_INSTRUCTIONS}
 
 {STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"), is_subagent=self.is_subagent, subagent_result_storage=os.path.join(self.output_location, "result.md") if self.is_subagent else "")}
 
-{SUB_AGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
+{SUBAGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()
 
         if self.genai_stuff:
