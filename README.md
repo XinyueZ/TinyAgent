@@ -365,7 +365,7 @@ cd labubuVShellokitty
 
 ### 🛠️ Developing Apps
 
-All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. Also note the coupling described in [Tools](#tools): some tools (e.g. `tiny_agent/tools/web/tools.py`) import these shared constants from `apps/__init__.py`, which is one reason new apps are typically developed under `apps/` within this repo. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
 
 <a id="app-builder"></a>
 
