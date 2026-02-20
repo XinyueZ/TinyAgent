@@ -86,7 +86,7 @@ def default_tool_extra_fun(
 
 
 DEFAULT_TOOL_EXTRA_PROMPT = """
-**Response from this tool:**
+**Response from [Tool] {func_name_to_decorate}:**
 {result} 
 
 **Information about the agent using this tool:**
