@@ -50,6 +50,42 @@ _MAIN_AGENT_MODEL_CONFIG = {
     ),
 }
 
+# For google search tool
+_SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+_SEARCH_AGENT_MODEL_CONFIG = {
+    "temperature": 1.0,
+    "seed": 42,
+    "top_p": 1.0,
+    "top_k": 60,
+    "thinking_config": types.ThinkingConfig(
+        thinking_budget=-1,
+        include_thoughts=False,
+    ),
+}
+
+# For all web search tools
+_SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+_SUMMARIZE_MODEL_CONFIG = {
+    "temperature": 0.0,
+    "seed": 42,
+    "thinking_config": types.ThinkingConfig(
+        thinking_budget=0,
+        include_thoughts=False,
+    ),
+}
+
+
+tavily_search.summarize_model = _SUMMARIZE_MODEL
+tavily_search.summarize_model_config = _SUMMARIZE_MODEL_CONFIG
+tavily_search.provider_config = _PROVIDER_CONFIG
+
+
+google_search.search_model = _SEARCH_AGENT_MODEL
+google_search.summarize_model = _SUMMARIZE_MODEL
+google_search.search_options = {**_SEARCH_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG}
+google_search.summarize_options = {**_SUMMARIZE_MODEL_CONFIG, **_PROVIDER_CONFIG}
+
+
 # python ./deep-research.py --output ./deep-research-output --tasks tasks/
 if __name__ == "__main__":
     print("Deep Research Multi Agents by Tool")

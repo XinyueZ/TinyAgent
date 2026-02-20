@@ -221,7 +221,7 @@ finally:
 
 ### Model & Provider Configuration
 
-Each app defines its own model names, model options, and provider settings directly in its `.py` file. Shared settings (e.g. search/summarization models) are in `apps/__init__.py`, but the main agent config lives in each app so you can tune per-app without side effects.
+Each app defines its own model names, model options, and provider settings directly in its entry-point `.py` file (the file where the app main lives). Web search tools (`tiny_agent/tools/web/`) are configured by injecting attributes onto the tool functions (e.g. `google_search.search_model`, `tavily_search.summarize_model`) inside that app entry file.
 
 ```python
 # Provider (Vertex AI vs Google AI Studio — mutually exclusive)
@@ -242,7 +242,6 @@ SUMMARIZE_MODEL_CONFIG = { "temperature": 0.0, "seed": 42, ... }
 ```
 
 See the following files for examples of how to define these:
-- `apps/__init__.py` — shared search/summarization model config
 - `apps/single-tavily-search-agent/agent.py` — single GenAI agent config
 - `apps/single-ollama-agent/agent.py` — single Ollama agent config
 - `apps/deep-research-multi-agents-tool-tavily-search/deep-research.py` — multi-agent config (main + research agents)
@@ -365,7 +364,7 @@ cd labubuVShellokitty
 
 ### 🛠️ Developing Apps
 
-All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there. See `apps/__init__.py` for shared model and provider configuration that all apps import from. To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
+All apps are developed under the `apps/` directory. To create a new app, add a new subdirectory there, and put your model/provider configuration (including web search tool attribute injection) in the app entry-point `.py` file (the one that contains the `if __name__ == "__main__"` block). To publish a new app for host-side CLI usage, add a corresponding shell script under `CLIs/` and a service entry in `docker-compose.yml`, following the existing ones as a reference.
 
 <a id="app-builder"></a>
 
@@ -468,7 +467,7 @@ This experiment extends Experiment I by adding a third pattern, comparing all th
 
 Tools are the callable capabilities exposed to agents. In this repo there are two main categories:
 
-Note: tools may import shared configuration constants from `apps/__init__.py` (e.g. model names and provider config). This is one reason app development is coupled with the repo's library code, and why new apps are typically developed under the `apps/` directory.
+Note: web search tools require configuration to be injected in an app entry file under `apps/` (the file where the app main lives). This is one reason app development is coupled with the repo's library code, and why new apps are typically developed under the `apps/` directory.
 
 | Category | What it provides | Source files |
 |----------|------------------|-------------|
