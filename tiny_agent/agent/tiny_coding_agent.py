@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-from google.genai import types
 
 from ..tools.coding.coding_tool import run_python_code
 from .tiny_agent import (
@@ -26,10 +25,10 @@ When writing code, prefer these libraries for optimal performance:
 {perf_libs}
 </preferred-libraries>
 
-<available-functions>
+<preferred-functions>
 Here are pre-written tool functions you can copy, edit and reuse directly in your code (ensure you import appropriate dependencies):
 {coding_tools}
-</available-functions>
+</preferred-functions>
 
 <task>
 This is where the user-defined task you need to complete is specified:
@@ -37,11 +36,11 @@ This is where the user-defined task you need to complete is specified:
 </task>
 
 Summary:
-You use coding-tools to run code, 
-**prefer** using functions from available-functions to assist you in completing the code, 
-you can also write your own code that you think is helpful, 
-you need to install necessary dependencies and libraries yourself, 
-and the libraries in preferred-libraries are recommended for performance optimization.
+You use coding-tools to run code.
+**Always** reuse functions from preferred-functions to assist you in completing the code.
+**Think about** how to integrate the preferred-functions into your code.
+You need to install necessary dependencies and libraries yourself.
+The libraries in preferred-libraries are recommended for performance optimization.
 """
 
 
