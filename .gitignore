@@ -1,0 +1,17 @@
+__pycache__
+.build/
+tmp/
+output/
+db/ 
+*.http
+.env
+.idea/
+.DS_Store
+*.log
+*output/
+.windsurf/ 
+memory.md
+work_plan.md
+reflection.md
+result.md
+sandbox/

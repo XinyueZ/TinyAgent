@@ -1,0 +1,144 @@
+services:
+  # Development container with full volume mount
+  TinyAgentDev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    container_name: TinyAgentDev
+    mem_limit: 64g
+    memswap_limit: 128g
+    volumes:
+      - .:/app
+      - ollama_data:/root/.ollama
+      # run_python_file() needs the Docker daemon to spin up sandboxed
+      # containers for code execution (see tiny_agent/tools/coding/run_code.py).
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "11434:11434"
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        ollama serve >/tmp/ollama.log 2>&1 &
+        until curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; do
+          sleep 1
+        done
+        echo "[TinyAgentDev] Ollama is ready at http://127.0.0.1:11434"
+        exec tail -f /dev/null
+
+  deep-research-multi-agents-tool-tavily-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/deep-research-multi-agents-tool-tavily-search/deep-research.py"]
+
+  single-tavily-search-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/single-tavily-search-agent/agent.py"]
+
+
+  deep-agents-research:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/deep-agents-research/deep-research.py"]
+
+  single-ollama-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/single-ollama-agent/agent.py"]
+
+  sequential-reflection-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/sequential-reflection-agent/sequential-reflection-agent.py"]
+ 
+  coding-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      # run_python_file() needs the Docker daemon to spin up sandboxed
+      # containers for code execution (see tiny_agent/tools/coding/run_code.py).
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/coding-agent/coding-agent.py"]
+
+  app-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tiny-agent-io:latest
+    volumes:
+      - .:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    env_file:
+      - ./apps/.env
+    working_dir: /app
+    entrypoint: ["python", "apps/app-builder/app-builder.py"]
+
+volumes:
+  ollama_data:

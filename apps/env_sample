@@ -1,0 +1,25 @@
+# 0: nothing to show with print_utils, 1: show less, 2: show more
+VERBOSE=2
+
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=your-location 
+GOOGLE_GENAI_USE_VERTEXAI=True
+GOOGLE_AI_STUDIO_API_KEY=your-api-key
+
+# ollama is using host machine installed, although the container has one inside.
+# "http://host.docker.internal:11434"
+# 
+OLLAMA_BASE_URL="http://host.docker.internal:11434"
+# hasszhao
+OLLAMA_API_KEY=your-ollama-api-key
+# dev.xinyue.zhao
+#OLLAMA_API_KEY=your-ollama-api-key
+......
+
+
+
+# tavily-python is required
+TAVILY_API_KEY_0=your-tavily-api-key
+TAVILY_API_KEY_1=your-tavily-api-key
+TAVILY_API_KEY_2=your-tavily-api-key
+.....

@@ -1,0 +1,12 @@
+python-dotenv==1.2.1
+pytest==9.0.2
+google-genai==1.62.0
+rich==14.3.2
+pydantic==2.12.5
+tavily-python==0.7.21
+jupyter==1.1.1
+ipykernel==6.29.5
+streamlit==1.54.0
+ollama==0.6.1
+docker==7.1.0
+yfinance==1.2.0

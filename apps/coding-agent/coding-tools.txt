@@ -1,0 +1,2 @@
+get_stock_data
+get_currency_exchange_rate
