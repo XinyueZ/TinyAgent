@@ -7,7 +7,8 @@ import os
 
 CODING_AGENT_INSTRUCTION = """
 <additional-instruction>
-You are an expert who can solve user tasks efficiently using code. Your goal is to fulfill the user's requirements as best as possible.
+You are an expert who can solve user tasks efficiently writing code and using code. 
+Your goal is to fulfill the user's requirements as best as possible.
 
 <coding-tools>
 Below are **pre-written Python functions** (coding_tools). You MUST treat them as the
@@ -22,7 +23,8 @@ foundation of your `main.py`:
 ```
 {coding_tools}
 ```
-Ignore if no coding tools are provided.
+
+**Notice:** If no coding tools are provided, you must write your own code from scratch, designing both the structure and logic yourself.
 </coding-tools>
 
 <suggested-dependencies>
@@ -30,7 +32,8 @@ The user has suggested the following Python packages as preferred dependencies:
   {perf_libs}
 If the list is non-empty, **always** include them in the bootstrap `pkgs` list.
 They may be essential for the task or for the coding_tools above.
-Ignore if no suggested dependencies are provided.
+
+**Notice:** If no suggested dependencies are given, you must determine which packages to use based on the task.
 </suggested-dependencies>
 
 <how-to-write-main-py>
