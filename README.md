@@ -54,13 +54,26 @@ For Google models, you can choose **exactly one** of the following authenticatio
 - **Vertex AI (recommended for GCP users)**
   - Set `GOOGLE_GENAI_USE_VERTEXAI=true`
   - Set `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`
-  - Authenticate via ADC (see the troubleshooting section below)
+  - Authenticate via ADC (see the troubleshooting section below and the [Note on Authentication in CLI Scripts](#auth-in-cli-scripts)).
 
 - **Google AI Studio API Key**
   - Set `GOOGLE_GENAI_USE_VERTEXAI=false`
   - Set `GOOGLE_AI_STUDIO_API_KEY`
+  - When running from the host, you may need to use the `--no-vertexai` flag. See the [Note on Authentication in CLI Scripts](#auth-in-cli-scripts).
 
 These two modes are **mutually exclusive**: when `GOOGLE_GENAI_USE_VERTEXAI=true`, the AI Studio API key will not be used.
+
+<a id="auth-in-cli-scripts"></a>
+### Note on Authentication in CLI Scripts
+
+When running applications from your host machine using the `CLIs/*.sh` scripts, the default behavior is to perform a Google Cloud authentication check.
+
+-   **Default (No Flag):** The script checks for valid Application Default Credentials (ADC) for Vertex AI. If credentials are not found or are expired, it will prompt you to log in via your web browser. This is the **required** mode for any app using **Vertex AI**.
+-   **With `--no-vertexai` flag:** The script will **skip** the Google Cloud authentication check entirely. You should use this flag if your application:
+    -   Uses an **Ollama** backend.
+    -   Uses the **Google AI Studio API Key** instead of Vertex AI.
+
+This flag only applies when running the `.sh` scripts from your host computer.
 
 <a id="ollama-env"></a>
 
@@ -219,6 +232,9 @@ finally:
 - `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
 - **Inside container**: Enter with `docker exec -it TinyAgentDev /bin/bash` first.
 - **From host**: CLI scripts handle Google Cloud ADC authentication and resolve `--output`/`--tasks` paths relative to your current directory automatically.
+
+  ‼️ By default, these scripts will check for valid Google Cloud Application Default Credentials (ADC) and prompt you to log in via your web browser if they are missing or expired. This is required for agents using Google GenAI models. If you are using a different backend (like Ollama) or do not need Google authentication, you can add the `--no-vertexai` flag to the command. This will skip the authentication check. 
+  🔥 If the app is based on the aistuido key, then use --no-vertexai. If it is based on ollama, it can be used as well, but if it is a vertexai app, then it must be used.
 
 <a id="coding-agent"></a>
 

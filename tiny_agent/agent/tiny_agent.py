@@ -9,6 +9,7 @@ from typing import Any, Callable, Optional
 from google.genai import types
 from ollama import ChatResponse
 from typing_extensions import TypedDict
+from pydantic import BaseModel
 
 from ..tools.buildins.core import (
     create_work_plan,
@@ -161,7 +162,7 @@ class TinyAgent:
         output_root: str,
         genai_stuff: GenaiStuffDict | None = None,
         ollama_stuff: OllamaStuffDict | None = None,
-        tools: list[Callable] | None = None,
+        tools: list[Callable | BaseModel] | None = None,
         subagents: list["TinyAgent"] | None = None,
         **kwargs,
     ):
@@ -260,7 +261,12 @@ class TinyAgent:
         # Each TinyAgent gets its own copy with its own _agent_info
         self.tools = []
         for tool_func in all_tools:
-            if hasattr(tool_func, "_agent_info"):
+            if isinstance(tool_func, BaseModel):
+                # This situation is very likely due to Google build-in tool
+                # https://ai.google.dev/gemini-api/docs/tools
+                # We don't track it.
+                self.tools.append(tool_func)
+            elif hasattr(tool_func, "_agent_info"):
                 # Create a wrapper that captures this agent's info
                 tool_copy = self._create_tool_copy(tool_func, agent_info)
                 self.tools.append(tool_copy)
@@ -310,14 +316,18 @@ class TinyAgent:
         }
 
     def _append_tools(
-        self, builtin_tools: list[Callable], upcoming_tools: list[Callable]
-    ) -> list[Callable]:
+        self,
+        builtin_tools: list[Callable | BaseModel],
+        upcoming_tools: list[Callable | BaseModel],
+    ) -> list[Callable | BaseModel]:
         for t in upcoming_tools:
-            if not callable(t):
-                raise TypeError(f"{t} is not callable")
-            if not hasattr(t, "_agent_info"):
+            if not callable(t) and not isinstance(t, BaseModel):
                 raise TypeError(
-                    f"{t.__name__ if hasattr(t, '__name__') else t} is not decorated by @tool() from tiny_agent.tools.decorator"
+                    f"{t} is not callable or BaseModel(Google Build-in Tool)"
+                )
+            if not hasattr(t, "_agent_info") and not isinstance(t, BaseModel):
+                raise TypeError(
+                    f"{t.__name__ if hasattr(t, '__name__') else t} is not decorated by @tool() from tiny_agent.tools.decorator OR is not a build-in tool from Google"
                 )
 
         return builtin_tools + upcoming_tools
@@ -404,7 +414,7 @@ class TinyAgent:
     def subagents_count(self) -> int:
         return len(self.subagents)
 
-    def get_buildin_tools(self) -> list[Callable]:
+    def get_buildin_tools(self) -> list[Callable | BaseModel]:
         return [
             create_work_plan,
             update_work_plan,

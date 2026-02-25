@@ -120,11 +120,13 @@ if ! command -v docker &>/dev/null; then
 fi
 
 # Ensure Google Cloud Application Default Credentials (ADC) are valid
-ADC_FILE="${HOME}/.config/gcloud/application_default_credentials.json"
-if [[ ! -f "${ADC_FILE}" ]] || ! gcloud auth application-default print-access-token &>/dev/null; then
-    echo "[INFO] ADC credentials missing or expired."
-    echo "[INFO] Running: gcloud auth application-default login"
-    gcloud auth application-default login
+if [[ ! " $@ " =~ " --no-vertexai " ]]; then
+    ADC_FILE="${HOME}/.config/gcloud/application_default_credentials.json"
+    if [[ ! -f "${ADC_FILE}" ]] || ! gcloud auth application-default print-access-token &>/dev/null; then
+        echo "[INFO] ADC credentials missing or expired."
+        echo "[INFO] Running: gcloud auth application-default login"
+        gcloud auth application-default login
+    fi
 fi
 
 # ── Parse --main from the arguments ──
