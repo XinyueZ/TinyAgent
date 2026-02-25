@@ -1,8 +1,8 @@
 #!/bin/bash
-# Run single-ollama-agent in Docker
+# Run single-google-search-agent in Docker
 #
 # Usage (from anywhere on the host):
-#   /app/CLIs/single-ollama-agent.sh --output <output_dir> --tasks <tasks_dir>
+#   /path/to/CLIs/single-google-search-agent.sh --output ./my-output --tasks ./my-tasks
 #
 # --output and --tasks are resolved relative to the caller's working directory,
 # mounted into the container, and rewritten so the Python app writes to the right place.
@@ -18,7 +18,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # ── Fallback: no Docker → run directly (e.g. already inside a container) ──
 if ! command -v docker &>/dev/null; then
     echo "[INFO] Docker not found. Running directly via Python."
-    exec python "${REPO_ROOT}/apps/single-ollama-agent/agent.py" "$@"
+    exec python "${REPO_ROOT}/apps/single-google-search-agent/agent.py" "$@"
 fi
 
 # Ensure Google Cloud Application Default Credentials (ADC) are valid
@@ -53,27 +53,24 @@ if [[ -z "${HOST_OUTPUT}" || -z "${HOST_TASKS}" ]]; then
 fi
 
 # ── Resolve to absolute paths (relative to caller's cwd) ──
-# Resolve --output
+# If relative, resolve against the caller's working directory
 [[ "${HOST_OUTPUT}" != /* ]] && HOST_OUTPUT="${PWD}/${HOST_OUTPUT}"
 mkdir -p "${HOST_OUTPUT}"
 HOST_OUTPUT="$(cd "${HOST_OUTPUT}" && pwd)"
 
-# Resolve --tasks
-[[ "${HOST_TASKS}" != /* ]] && HOST_TASKS="${PWD}/${HOST_TASKS}"
-if [[ ! -d "${HOST_TASKS}" ]]; then
-    echo "[ERROR] Tasks directory does not exist: ${HOST_TASKS}"
-    exit 1
-fi
-HOST_TASKS="$(cd "${HOST_TASKS}" && pwd)"
+VOLUME_ARGS=(-v "${HOST_OUTPUT}:/host_output")
+CONTAINER_ARGS=(--output /host_output)
 
-VOLUME_ARGS=(
-    -v "${HOST_OUTPUT}:/host_output"
-    -v "${HOST_TASKS}:/host_tasks:ro"
-)
-CONTAINER_ARGS=(
-    --output /host_output
-    --tasks /host_tasks
-)
+if [[ -n "${HOST_TASKS}" ]]; then
+    [[ "${HOST_TASKS}" != /* ]] && HOST_TASKS="${PWD}/${HOST_TASKS}"
+    if [[ ! -d "${HOST_TASKS}" ]]; then
+        echo "[ERROR] Tasks directory does not exist: ${HOST_TASKS}"
+        exit 1
+    fi
+    HOST_TASKS="$(cd "${HOST_TASKS}" && pwd)"
+    VOLUME_ARGS+=(-v "${HOST_TASKS}:/host_tasks:ro")
+    CONTAINER_ARGS+=(--tasks /host_tasks)
+fi
 
 # ── Run ──
 CMD=(
@@ -82,7 +79,7 @@ CMD=(
     --project-directory "${REPO_ROOT}"
     run --rm
     "${VOLUME_ARGS[@]}"
-    single-ollama-agent
+    single-google-search-agent
     "${CONTAINER_ARGS[@]}"
 )
 if [[ ${#OTHER_ARGS[@]} -gt 0 ]]; then

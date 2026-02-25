@@ -54,13 +54,26 @@ For Google models, you can choose **exactly one** of the following authenticatio
 - **Vertex AI (recommended for GCP users)**
   - Set `GOOGLE_GENAI_USE_VERTEXAI=true`
   - Set `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`
-  - Authenticate via ADC (see the troubleshooting section below)
+  - Authenticate via ADC (see the troubleshooting section below and the [Note on Authentication in CLI Scripts](#auth-in-cli-scripts)).
 
 - **Google AI Studio API Key**
   - Set `GOOGLE_GENAI_USE_VERTEXAI=false`
   - Set `GOOGLE_AI_STUDIO_API_KEY`
+  - When running from the host, you may need to use the `--no-vertexai` flag. See the [Note on Authentication in CLI Scripts](#auth-in-cli-scripts).
 
 These two modes are **mutually exclusive**: when `GOOGLE_GENAI_USE_VERTEXAI=true`, the AI Studio API key will not be used.
+
+<a id="auth-in-cli-scripts"></a>
+### Note on Authentication in CLI Scripts
+
+When running applications from your host machine using the `CLIs/*.sh` scripts, the default behavior is to perform a Google Cloud authentication check.
+
+-   **Default (No Flag):** The script checks for valid Application Default Credentials (ADC) for Vertex AI. If credentials are not found or are expired, it will prompt you to log in via your web browser. This is the **required** mode for any app using **Vertex AI**.
+-   **With `--no-vertexai` flag:** The script will **skip** the Google Cloud authentication check entirely. You should use this flag if your application:
+    -   Uses an **Ollama** backend.
+    -   Uses the **Google AI Studio API Key** instead of Vertex AI.
+
+This flag only applies when running the `.sh` scripts from your host computer.
 
 <a id="ollama-env"></a>
 
@@ -209,6 +222,7 @@ finally:
 | App | Backend | Description | 🐳 Inside Container | 💻 Local Computer (CLI) |
 |-----|---------|-------------|-----------------|-----------------|
 | `apps/single-tavily-search-agent` | Google GenAI | Single agent with Tavily web search | `cd apps/single-tavily-search-agent`<br>`python ./agent.py --output ./agent-output`<br>[More ↓](#run-inside-container) | `CLIs/single-tavily-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
+| `apps/single-google-search-agent` | Google GenAI | Single agent with Google built-in search tool (Vertex AI only) | `cd apps/single-google-search-agent`<br>`python ./agent.py --output ./agent-output --tasks ./tasks`<br>[More ↓](#run-inside-container) | `CLIs/single-google-search-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/single-ollama-agent` | Ollama | Single agent with web search via Ollama | `cd apps/single-ollama-agent`<br>`python ./agent.py --output ./agent-output --tasks ./tasks`<br>[More ↓](#run-inside-container) | `CLIs/single-ollama-agent.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-research-multi-agents-tool-tavily-search` | Google GenAI | Deep research via tool calls that spawn multiple TinyAgents concurrently with Tavily search | `cd apps/deep-research-multi-agents-tool-tavily-search`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-research-multi-agents-tool-tavily-search.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
 | `apps/deep-agents-research` | Google GenAI | Deep agents research with a lead agent coordinating multiple sub-agents | `cd apps/deep-agents-research`<br>`python ./deep-research.py --output ./deep-research-output --tasks ./my-tasks`<br>[More ↓](#run-inside-container) | `CLIs/deep-agents-research.sh`<br>`--output ./my-output --tasks ./my-tasks`<br>[More ↓](#run-from-host) |
@@ -217,8 +231,20 @@ finally:
 
 - `--output` (required): Output directory for results.
 - `--tasks`: Directory containing task files (`.md`). **Required** when running from host via CLI. Optional inside container (defaults to `./tasks/` in the app folder).
-- **Inside container**: Enter with `docker exec -it TinyAgentDev /bin/bash` first.
-- **From host**: CLI scripts handle Google Cloud ADC authentication and resolve `--output`/`--tasks` paths relative to your current directory automatically.
+- **Inside container**: Enter with `docker exec -it TinyAgentDev /bin/bash` first. See [Run Inside Container ↓](#run-inside-container).
+- **From host**: CLI scripts handle Google Cloud ADC authentication and resolve `--output`/`--tasks` paths relative to your current directory automatically. See [Run From Host ↓](#run-from-host).
+
+<a id="cli-auth-note"></a>
+
+> **⚠️ Authentication & `--no-vertexai` Flag**
+>
+> | Scenario | Flag Required? | Reason |
+> |----------|---------------|--------|
+> | **Vertex AI (GCP)** | ❌ No | Uses Application Default Credentials (ADC); scripts auto-check and prompt for login if missing |
+> | **Google AI Studio** | ✅ **Yes** | API key-based auth; bypass ADC check with `--no-vertexai` |
+> | **Ollama** | ✅ **Yes** | No Google auth needed; use `--no-vertexai` to skip check |
+>
+> **Example:** `.../TinyAgent/CLIs/single-ollama-agent.sh --output ./out --tasks ./tasks --no-vertexai`
 
 <a id="coding-agent"></a>
 
@@ -228,7 +254,8 @@ This section explains how the repo's Python coding agent works end-to-end — fr
 
 🔥 **Scope note**: At the moment, `TinyCodingAgent` only generates a single Python program file: `main.py`. That generated `main.py` is expected to include a bootstrap section that installs dependencies (via `pip`) every run.
 
-🧪 **Sandbox note**: Special thanks to the whole vibe-coding era — it enabled a practical “container-in-container” sandbox so the agent can safely execute arbitrary Python programs. In this repo, that sandbox execution is implemented as the tool `run_python_file` in `tiny_agent/tools/coding/run_code.py`.
+<a id="sandbox-note"></a>
+🧪 **Sandbox note**: Special thanks to the whole vibe-coding era — it enabled a practical “container-in-container” sandbox so the agent can safely execute arbitrary Python programs. In this repo, that sandbox execution is implemented as the tool `run_python_file` in `tiny_agent/tools/coding/run_code.py`. For usage details, see [🤖 Coding-Agent](#coding-agent).
 
 #### 1) `TinyCodingAgent` and `CODING_AGENT_INSTRUCTION`
 
@@ -281,6 +308,7 @@ This makes the selection explicit and keeps the surface area of executable code 
 - Add a new coding tool implementation (e.g. under `tiny_agent/tools/...`).
 - Import it and register it in `tiny_agent/tools/__init__.py`.
 - Then it becomes selectable by name from `apps/coding-agent/coding-agent.py`.
+- ‼️ **Prerequisite**: `TinyCodingAgent` requires Docker-in-Docker access. See [🧪 Sandbox note ↑](#sandbox-note). When using [🏗️ App Builder](#app-builder) to create CLI scripts for apps that use `TinyCodingAgent` (as main agent or sub-agent), you **must** add `--sandbox-sock` to enable Docker socket mounting.
 
 ### Model & Provider Configuration
 
@@ -373,13 +401,20 @@ $APP_BUILDER --main apps/my-new-app/my-new-app.py
 
 The generated `CLIs/my-new-app.sh` is ready to use immediately.
 
-#### Run Inside Container
+<a id="run-inside-container"></a>
+
+#### 🐳 Run Inside Container
+
+> [📋 Back to Apps table ↑](#apps) · [💻 Run From Host →](#run-from-host) · [🔧 Auth & Flags](#cli-auth-note)
 
 ```bash
 docker exec -it TinyAgentDev /bin/bash
 
 # Single agent
 cd apps/single-tavily-search-agent
+python ./agent.py --output ./agent-output --tasks /path/to/labubuVShellokitty
+
+cd apps/single-google-search-agent
 python ./agent.py --output ./agent-output --tasks /path/to/labubuVShellokitty
 
 # Deep research
@@ -399,7 +434,11 @@ cd apps/app-builder
 python ./app-builder.py --main /path/to/apps/my-app/main.py
 ```
 
-#### Run From Host
+<a id="run-from-host"></a>
+
+#### 💻 Run From Host
+
+> [📋 Back to Apps table ↑](#apps) · [🐳 Run Inside Container →](#run-inside-container) · [🔧 Auth & Flags](#cli-auth-note)
 
 ```bash
 cd labubuVShellokitty
@@ -415,6 +454,9 @@ cd labubuVShellokitty
 
 # Or single agent
 .../TinyAgent/CLIs/single-tavily-search-agent.sh --output single-tavily-search-agent/ --tasks .
+
+# Or single google-search agent
+.../TinyAgent/CLIs/single-google-search-agent.sh --output single-google-search-agent/ --tasks .
 
 # Or single ollama agent
 .../TinyAgent/CLIs/single-ollama-agent.sh --output single-ollama-agent/ --tasks .
@@ -453,6 +495,11 @@ This means publishing a new app to the CLI is as simple as running:
 ```bash
 python apps/app-builder/app-builder.py --main apps/my-new-app/main.py
 ```
+
+> **⚠️ Important**: If your app uses `TinyCodingAgent` (as main agent or sub-agent), you **must** add `--sandbox-sock` to enable Docker-in-Docker sandboxing:
+> ```bash
+> $APP_BUILDER --main apps/my-new-app/main.py --sandbox-sock
+> ```
 
 Inside the container, the environment variable `$APP_BUILDER` points to `/app/CLIs/app-builder.sh`, so you can also run:
 
@@ -644,13 +691,8 @@ This section applies when using **Google GenAI / Vertex AI** (not Ollama).
 
 If you encounter `DefaultCredentialsError` or any credential-related error during execution:
 
-- **Inside container**: Run the following command inside the container to authenticate:
-  ```bash
-  gcloud auth application-default login
-  ```
-  Follow the prompts to complete the authentication flow.
-
-- **From host (via `CLIs/*.sh`)**: The CLI scripts will automatically detect missing or expired credentials and trigger `gcloud auth application-default login`. This will open a **web browser login dialog** — complete the authentication in the browser, then the script will continue automatically.
+- **Inside container**: See [Environment Setup →](#environment-setup) for authentication instructions.
+- **From host (via `CLIs/*.sh`)**: The CLI scripts will automatically detect missing or expired credentials and trigger `gcloud auth application-default login`. This will open a **web browser login dialog** — complete the authentication in the browser, then the script will continue automatically. See [CLI Authentication Note ↑](#cli-auth-note) for details on when to use `--no-vertexai`.
 
 ---
 
