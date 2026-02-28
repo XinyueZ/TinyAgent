@@ -56,6 +56,16 @@ _SUMMARIZE_MODEL_CONFIG = {
     ),
 }
 
+_PROVIDER_CONFIG = {
+    "vertexai": os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "True") == "True",
+    "vertexai_location": os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west4"),
+    "vertexai_project": os.environ.get(
+        "GOOGLE_CLOUD_PROJECT", "hg-hjghjg-ai-ft-exp-pr-hjjkhljhlhjkl"
+    ),
+    "google_ai_studio_api_key": os.environ.get(
+        "GOOGLE_AI_STUDIO_API_KEY", "adfasdfasdfads"
+    ),
+}
 
 tavily_search.summarize_model = _SUMMARIZE_MODEL
 tavily_search.summarize_model_config = _SUMMARIZE_MODEL_CONFIG
@@ -66,6 +76,7 @@ google_search.search_model = _SEARCH_AGENT_MODEL
 google_search.summarize_model = _SUMMARIZE_MODEL
 google_search.search_options = {**_SEARCH_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG}
 google_search.summarize_options = {**_SUMMARIZE_MODEL_CONFIG, **_PROVIDER_CONFIG}
+
 
 def get_main_agent_goal(task: str, output_path: str) -> str:
     return f"""
