@@ -1,0 +1,29 @@
+{
+  "python.defaultInterpreterPath": "/usr/local/bin/python",
+  "python.languageServer": "Pylance",
+  "python.analysis.extraPaths": [
+    "/usr/local/lib/python3.13/site-packages",
+    "/app"
+  ],
+  "editor.semanticHighlighting.enabled": true,
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.suggestSelection": "first",
+  "editor.parameterHints.enabled": true,
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

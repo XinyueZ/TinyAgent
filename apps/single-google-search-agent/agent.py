@@ -87,7 +87,7 @@ The task:
 
 -----
 
-Decompose the task into piece of research topics and compile them into a list. 
+Decompose the task into piece of research topics and compile them into a list.
 
 Use the **all possible internet or web search tools** to perform a web search for each topic **ONE BY ONE**. Search for **at most 3 results** for each topic.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise. Citation URLs are important; please carry them together with the results.
@@ -175,10 +175,7 @@ if __name__ == "__main__":
         name="main_agent",
         model=_MAIN_AGENT_MODEL,
         output_root=args.output,
-        tools=[
-            google_search,
-        ]
-        + _google_search_only_for_vertexai(),
+        tools=[google_search] + _google_search_only_for_vertexai(),
         genai_stuff={**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
     )
 
