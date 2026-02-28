@@ -16,7 +16,7 @@ class GoogleGroundings:
 
 
 class GoogleSearch(BaseWebSearch):
-    """A class to perform Tavily search with content summarization."""
+    """A class to perform Google search with content summarization."""
 
     def __init__(
         self,
