@@ -18,10 +18,6 @@ class TavilySearch(BaseWebSearch):
         Args:
             api_key: Tavily API key. If None, uses TAVILY_API_KEY from environment.
             summarize_model: Model to use for summarization. If None, uses GEMINI_MODEL from environment.
-            vertexai: Whether to use Vertex AI. If None, uses GOOGLE_GENAI_USE_VERTEXAI from environment.
-            vertexai_project: Vertex AI project. If None, uses GOOGLE_CLOUD_PROJECT from environment.
-            vertexai_location: Vertex AI location. If None, uses GOOGLE_CLOUD_LOCATION from environment.
-            google_ai_studio_api_key: Google AI Studio API key. If None, uses GOOGLE_AI_STUDIO_API_KEY from environment.
             **kwargs: Additional keyword arguments to summarize model config.
         """
         if not api_key or not summarize_model:
