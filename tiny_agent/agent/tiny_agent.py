@@ -522,12 +522,12 @@ class TinyAgent:
                         }
                     )
 
-                    response = self.client.models.generate_content(
-                        model=self.model,
-                        contents=prompt,
-                        config=self.genai_stuff["config"],
-                    )
-                    return response
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=self.genai_stuff["config"],
+                )
+                return response
 
             if self.ollama_stuff:
                 if kwargs:
