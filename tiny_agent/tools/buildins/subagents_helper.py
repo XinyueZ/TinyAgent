@@ -1,9 +1,11 @@
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-import threading
-from tiny_agent.utils.print_utils import format_text
+
 from tiny_agent.agent.agent_manager import AgentManager
+from tiny_agent.utils.print_utils import format_text
+
 from ..decorator import tool
 
 _locks_guard = threading.Lock()
@@ -28,7 +30,7 @@ def _org_result(sub_agent) -> str:
         memory_path = f"{sub_agent.output_location}/memory.md"
         if Path(memory_path).exists():
             return f"The {sub_agent.name} has finished the task without a result file, **but** you can check the memory file: {str(memory_path)}"
-        return f"The {sub_agent.name} has finished the task but no result or memory has been generated, please **ignore** this topic research."
+        return f"The {sub_agent.name} has finished the task, but no result or memory file has been generated. **Ignore** this agent's work."
 
 
 @tool()

@@ -1,12 +1,12 @@
 import os
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
-from tiny_agent.subagent.decorator import subagent
 from tiny_agent.patterns import NUM_RESEARCHER_RESULTS
+from tiny_agent.subagent.decorator import subagent
 
-from ..tools.decorator import *
 from ..agent.tiny_agent import TinyAgent
+from ..tools.decorator import *
 
 _RESEARCH_LEADER_PROMPT = """
 You are leading a research team and will perform a research task.
@@ -40,11 +40,11 @@ Output:
 - Save the final report to a file at the path {output_path}/result.md.
 
 Notice:
-- Avoid striving for excessive perfection; focus on being concise. 
+- Avoid striving for excessive perfection; focus on being concise.
 - Do not feel obligated to cover all topics; stop when you feel you have enough information.
 - If a coworker cannot complete as expected and yields no result or memory, skip that coworker.
 
-Language restrictions: 
+Language restrictions:
 Provide a final report in the language of the original task.
 
 **Reflect** on yourself to check if the report file exists and the language requirements are met. If not, redo the save operation to save the report to the file. If the file exists, respond to the user.
@@ -139,14 +139,13 @@ class DeepAgentsResearch:
                     model=self.research_agent_model,
                     output_root=self.output_root,
                     tools=self.research_tools,
-                    genai_stuff={
-                        **self.research_agent_model_config,
-                        **self.research_agent_provider,
-                    },
+                    genai_stuff=self.research_agent_provider,
+                    **self.research_agent_model_config,
                 )
                 for i in range(self._get_cpu_core_count())
             ],
-            genai_stuff={**main_agent_model_config, **main_provider},
+            genai_stuff=main_provider,
+            **main_agent_model_config,
         )
 
     def _get_cpu_core_count(self):
