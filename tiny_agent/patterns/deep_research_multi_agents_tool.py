@@ -18,9 +18,9 @@ The task:
 
 -----
 
-Decompose the task into different topics (at most {max_topics} topics) and compile them into a list. 
-Conduct thorough research on the list **ONLY ONCE**. 
-Avoid striving for excessive perfection, and focus on being concise. 
+Decompose the task into different topics (at most {max_topics} topics) and compile them into a list.
+Conduct thorough research on the list **ONLY ONCE**.
+Avoid striving for excessive perfection, and focus on being concise.
 Do not feel obligated to cover all topics; stop when you feel you have enough information.
 
 **You don't do** any research yourself; instead, you must merge the results from the different research sources.
@@ -159,6 +159,12 @@ class DeepResearchMultAgentsTool:
                 return "We have no topics to start research. Please provide some topics as list to start research."
 
             def _run_agent(idx: int, topic: str) -> tuple[str, str]:
+                # IMPORTANT: TinyAgent is created inside this function, which runs in a worker
+                # thread (via ThreadPoolExecutor.submit). This ensures:
+                # 1. Each TinyAgent is created in its own worker thread
+                # 2. _owner_thread_id captures the worker thread ID (not main thread)
+                # 3. The same worker thread both creates and calls the agent
+                # 4. No cross-thread access → thread safety check passes
                 sub_agent = TinyAgent(
                     name=f"researcher_{idx}",
                     model=self.research_agent_model,

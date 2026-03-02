@@ -14,6 +14,9 @@ def list_dir(target_dir: str, is_absolute: bool = True) -> str:
     Returns:
         A Python `str` containing a list of all file and directory paths.
     """
+    ctx = get_tool_context()
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         target_path = Path(target_dir).resolve()
         if not target_path.exists():
@@ -29,7 +32,9 @@ def list_dir(target_dir: str, is_absolute: bool = True) -> str:
                 all_paths.append(str(item.relative_to(target_path)))
 
         result = "\n".join(all_paths)
-        format_text(result, f"List Dir: {target_dir}", "green")
+        format_text(
+            result, f"{agent_name}-{agent_id} | List Dir | {target_dir}", "green"
+        )
         return result if result else "Directory is empty."
     except Exception as e:
         import traceback
@@ -48,10 +53,17 @@ def read_file(file_full_path: str) -> str:
     Returns:
         A Python `str` with the file content or error message.
     """
+    ctx = get_tool_context()
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         with open(file_full_path, "r") as f:
             content = f.read()
-            format_text(content, f"Read File: {file_full_path}", "green")
+            format_text(
+                content,
+                f"{agent_name}-{agent_id} | Read File | {file_full_path}",
+                "green",
+            )
         return content
     except FileNotFoundError:
         return f"File not found: {file_full_path}"
@@ -74,11 +86,18 @@ def write_file(text: str, file_full_path: str) -> str:
     Returns:
         A Python `str` with confirmation that the file was written.
     """
+    ctx = get_tool_context()
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         Path(file_full_path).parent.mkdir(parents=True, exist_ok=True)
         with open(file_full_path, "w") as f:
             f.write(text)
-            format_text(text, f"Write File: {file_full_path}", "green")
+            format_text(
+                text,
+                f"{agent_name}-{agent_id} | Write File | {file_full_path}",
+                "green",
+            )
         return f"File written successfully: {file_full_path}"
     except Exception as e:
         import traceback
@@ -99,11 +118,18 @@ def append_to_file(text: str, file_full_path: str) -> str:
     Returns:
         A Python `str` with confirmation that the content was appended.
     """
+    ctx = get_tool_context()
+    agent_name = ctx["agent_info"]["agent_name"]
+    agent_id = ctx["agent_info"]["agent_id"]
     try:
         Path(file_full_path).parent.mkdir(parents=True, exist_ok=True)
         with open(file_full_path, "a") as f:
             f.write(text)
-            format_text(text, f"Append to File: {file_full_path}", "green")
+            format_text(
+                text,
+                f"{agent_name}-{agent_id} | Append to File | {file_full_path}",
+                "green",
+            )
         return f"Content appended successfully to: {file_full_path}"
     except FileNotFoundError:
         return f"File not found: {file_full_path}"
@@ -125,9 +151,16 @@ def file_exists(file_full_path: str) -> str:
         A Python `str` indicating whether the file exists.
     """
     try:
+        ctx = get_tool_context()
+        agent_name = ctx["agent_info"]["agent_name"]
+        agent_id = ctx["agent_info"]["agent_id"]
         exists = Path(file_full_path).exists()
         result = f"File {'exists' if exists else 'does not exist'}: {file_full_path}"
-        format_text(result, "File Exists Check", "blue")
+        format_text(
+            result,
+            f"{agent_name}-{agent_id} | File Exists Check | {file_full_path}",
+            "blue",
+        )
         return result
     except Exception as e:
         import traceback
