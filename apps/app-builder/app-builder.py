@@ -93,7 +93,8 @@ main path: {args.main}
         name="app_builder",
         model=_APP_BUILDER_MODEL,
         output_root="./.build",
-        genai_stuff={**_APP_BUILDER_MODEL_CONFIG, **_PROVIDER_CONFIG},
+        genai_stuff=_PROVIDER_CONFIG,
+        **_APP_BUILDER_MODEL_CONFIG,
     )
 
     agent(contents=task)

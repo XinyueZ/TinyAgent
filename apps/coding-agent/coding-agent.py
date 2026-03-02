@@ -8,8 +8,8 @@ from pathlib import Path
 from google.genai import types
 
 from tiny_agent.agent.tiny_coding_agent import TinyCodingAgent
-from tiny_agent.tools.decorator import *
 from tiny_agent.tools import CODING_TOOLS
+from tiny_agent.tools.decorator import *
 
 _PROVIDER_CONFIG = {
     "vertexai": os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "True") == "True",
@@ -84,7 +84,8 @@ if __name__ == "__main__":
         output_root=args.output,
         perf_libs=perf_libs,
         coding_tools=coding_tools,
-        genai_stuff={**_PYTHON_CODING_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
+        genai_stuff=_PROVIDER_CONFIG,
+        **_PYTHON_CODING_AGENT_MODEL_CONFIG,
     )
 
     if args.tasks:

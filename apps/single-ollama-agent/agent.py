@@ -90,7 +90,7 @@ The task:
 
 -----
 
-Decompose the task into piece of research topics and compile them into a list. 
+Decompose the task into piece of research topics and compile them into a list.
 
 Use the **all possible internet or web search tools** to perform a web search for each topic **ONE BY ONE**. Search for **at most 3 results** for each topic.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise. Citation URLs are important; please carry them together with the results.
@@ -167,7 +167,8 @@ if __name__ == "__main__":
         model=_OLLAMA_MODEL,
         output_root=args.output,
         tools=[google_search, tavily_search],
-        ollama_stuff={**_OLLAMA_MODEL_CONFIG, **_OLLAMA_CONFIG},
+        ollama_stuff=_OLLAMA_CONFIG,
+        **_OLLAMA_MODEL_CONFIG,
     )
 
     full_task = get_main_agent_goal(
