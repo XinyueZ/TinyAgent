@@ -1,6 +1,5 @@
 from google import genai
 from google.genai import types
-
 from pydantic import BaseModel, Field
 
 
@@ -53,10 +52,10 @@ class BaseWebSearch:
         self.summarize_model = summarize_model
         self.summarize_genai_client = self._create_genai_client(
             summarize_model,
-            vertexai,
-            vertexai_project,
-            vertexai_location,
-            google_ai_studio_api_key,
+            vertexai=vertexai,
+            vertexai_project=vertexai_project,
+            vertexai_location=vertexai_location,
+            google_ai_studio_api_key=google_ai_studio_api_key,
         )
         self.summarize_model_config = types.GenerateContentConfig(
             **{
@@ -73,23 +72,20 @@ class BaseWebSearch:
     def _create_genai_client(
         cls,
         model: str,
-        vertexai: bool = True,
-        vertexai_project: str = None,
-        vertexai_location: str = None,
-        google_ai_studio_api_key=None,
+        **kwargs,
     ) -> genai.Client:
         return genai.Client(
             **(
                 {
-                    "vertexai": vertexai,
-                    "project": vertexai_project,
+                    "vertexai": kwargs["vertexai"],
+                    "project": kwargs["vertexai_project"],
                     "location": (
-                        "global" if "-preview" in model else vertexai_location
+                        "global" if "-preview" in model else kwargs["vertexai_location"]
                     ),
                 }
-                if vertexai
+                if kwargs["vertexai"]
                 else {
-                    "api_key": google_ai_studio_api_key,
+                    "api_key": kwargs["google_ai_studio_api_key"],
                 }
             )
         )
