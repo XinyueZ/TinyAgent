@@ -87,7 +87,7 @@ The task:
 
 -----
 
-Decompose the task into piece of research topics and compile them into a list. 
+Decompose the task into piece of research topics and compile them into a list.
 
 Use the **all possible internet or web search tools** to perform a web search for each topic **ONE BY ONE**. Search for **at most 3 results** for each topic.
 **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise. Citation URLs are important; please carry them together with the results.
@@ -164,7 +164,8 @@ if __name__ == "__main__":
         model=_MAIN_AGENT_MODEL,
         output_root=args.output,
         tools=[tavily_search, google_search],
-        genai_stuff={**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
+        genai_stuff=_PROVIDER_CONFIG,
+        **_MAIN_AGENT_MODEL_CONFIG,
     )
 
     full_task = get_main_agent_goal(

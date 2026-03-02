@@ -30,7 +30,7 @@ def _org_result(sub_agent) -> str:
         memory_path = f"{sub_agent.output_location}/memory.md"
         if Path(memory_path).exists():
             return f"The {sub_agent.name} has finished the task without a result file, **but** you can check the memory file: {str(memory_path)}"
-        return f"The {sub_agent.name} has finished the task but no result or memory has been generated, please **ignore** this topic research."
+        return f"The {sub_agent.name} has finished the task, but no result or memory file has been generated. **Ignore** this agent's work."
 
 
 def _record_transfer_history(parent_agent, task: str):

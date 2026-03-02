@@ -507,16 +507,27 @@ class TinyAgent:
                     self.genai_stuff["config"] = types.GenerateContentConfig(
                         **{
                             **self.genai_stuff["config"].model_dump(exclude_none=True),
+                            # Explicitly restore object references to prevent serialization issues
+                            "http_options": self.genai_stuff.get("http_options"),
+                            "tools": self.tools,
+                            "system_instruction": self.genai_stuff.get(
+                                "system_instruction"
+                            ),
+                            "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+                                disable=False,
+                                maximum_remote_calls=99999999,
+                                ignore_call_history=False,
+                            ),
                             **kwargs,
                         }
                     )
 
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt,
-                    config=self.genai_stuff["config"],
-                )
-                return response
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                        config=self.genai_stuff["config"],
+                    )
+                    return response
 
             if self.ollama_stuff:
                 if kwargs:
