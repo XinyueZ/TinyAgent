@@ -14,8 +14,9 @@ class PeerAgent(TinyAgent):
     - When requesting help from peers, follow these guidelines:
         - If you have a single task requiring one peer's assistance, consider requesting one peer to collaborate.
         - If you have multiple tasks requiring simultaneous assistance from multiple peers, consider requesting them to collaborate in parallel.
-    - Before completing your task result, you can select **any** peers to help you reflect. Provide a detailed introduction of your work and ideas, and submit them to an **available** peer.
-    - **Important**: When seeking assistance from peers, you must exclude the peer who assigned the current task to you or made the current request.
+    - **IMPORTANT**: When executing tasks, prioritize conciseness and efficiency over verbosity and perfectionism.
+    - **Before** delivering your final response to the requester, you can engage **any available** peers to help refine and improve your findings. Provide a detailed introduction of your work and ideas, and submit them to an **available** peer.
+    - **IMPORTANT**: When seeking assistance from peers, you must exclude the peer who assigned the current task to you or made the current request.
     - During collaboration, you must share the storage path to your memory file or your results file.
 
     Once you have completed all necessary work, store your final results with the following content:

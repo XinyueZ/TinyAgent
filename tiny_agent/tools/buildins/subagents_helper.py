@@ -33,10 +33,10 @@ def _org_result(sub_agent) -> str:
         return f"The {sub_agent.name} has finished the task, but no result or memory file has been generated. **Ignore** this agent's work."
 
 
-def _record_transfer_history(parent_agent, task: str):
+def _record_transfer_history(parent_agent, content: str):
     transfer_history_path = f"{parent_agent.output_location}/agent_transfer_history.md"
     with open(transfer_history_path, "a") as f:
-        f.write(f"\n{task}\n")
+        f.write(f"\n{content}\n")
 
 
 @tool()
@@ -70,7 +70,7 @@ def transfer_to_subagent(
 - Task:
 {task}
 """,
-            f"Transfer to Subagent",
+            "Transfer to Subagent",
             "cyan",
         )
         sa = parent_agent.get_subagent_by_name(to_subagent)
@@ -92,7 +92,12 @@ def transfer_to_subagent(
         if sa.is_busy:
             return f"Subagent (name: {sa.name}, id: {sa.agent_id}) is currently busy processing another task; concurrent calls are not allowed. Please try again later or use another sub-agent, from agent: {from_agent}"
 
-        _record_transfer_history(parent_agent, task)
+        _record_transfer_history(
+            parent_agent,
+            f"""Task transferred to sub-agent: {to_subagent}
+
+{task}""",
+        )
         sa(task)
         return _org_result(sa)
     finally:
@@ -193,7 +198,12 @@ def transfer_to_subagents(
                 executor.submit(sa, task): name
                 for (name, sa), task in zip(the_subagents, distributed_tasks)
             }
-            _record_transfer_history(parent_agent, tasks)
+            _record_transfer_history(
+                parent_agent,
+                f"""Tasks transferred to sub-agents in parallel: {', '.join(name for name, _ in the_subagents)}
+
+{tasks}""",
+            )
             for future in as_completed(future_to_name):
                 name = future_to_name[future]
                 try:
