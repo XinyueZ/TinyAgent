@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
+
 from google.genai import types
+
 from .base_web_search import BaseWebSearch
 
 
@@ -35,21 +37,18 @@ class GoogleSearch(BaseWebSearch):
 
         search_model_config = kwargs.get("search_model_config", dict())
         self.search_genai_client = self._create_genai_client(
-            search_model, search_model_config
+            search_model, **search_model_config
         )
-        self.search_model_config = types.GenerateContentConfig(
-            **{
-                **{
-                    "tools": [types.Tool(google_search=types.GoogleSearch())],
-                    "response_modalities": ["TEXT"],
-                },
-                **{
-                    k: v
-                    for k, v in search_model_config.items()
-                    if k in ["temperature", "top_p", "top_k", "max_output_tokens"]
-                },
-            },
-        )
+
+        # Get valid fields from GenerateContentConfig
+        valid_fields = types.GenerateContentConfig.model_fields.keys()
+        model_only_config = {k: v for k, v in search_model_config.items() if k in valid_fields}
+
+        self.search_model_config = {
+            "tools": [types.Tool(google_search=types.GoogleSearch())],
+            "response_modalities": ["TEXT"],
+            **model_only_config,
+        }
 
         self.groundings = GoogleGroundings()
 

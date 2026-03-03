@@ -176,7 +176,8 @@ if __name__ == "__main__":
         model=_MAIN_AGENT_MODEL,
         output_root=args.output,
         tools=[google_search] + _google_search_only_for_vertexai(),
-        genai_stuff={**_MAIN_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG},
+        genai_stuff=_PROVIDER_CONFIG,
+        **_MAIN_AGENT_MODEL_CONFIG,
     )
 
     full_task = get_main_agent_goal(

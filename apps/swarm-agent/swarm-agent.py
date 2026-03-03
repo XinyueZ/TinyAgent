@@ -1,3 +1,4 @@
+# suppress the warning
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -5,11 +6,14 @@ warnings.filterwarnings("ignore")
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from google.genai import types
 
-from tiny_agent.agent.tiny_coding_agent import TinyCodingAgent
-from tiny_agent.tools import CODING_TOOLS
-from tiny_agent.tools.decorator import *
+from tiny_agent.patterns.swarm_agent import SwarmAgent
+from tiny_agent.tools.web.tools import google_search, tavily_search
+from tiny_agent.utils.print_utils import format_text
+
+load_dotenv()
 
 _PROVIDER_CONFIG = {
     "vertexai": os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "True") == "True",
@@ -22,8 +26,8 @@ _PROVIDER_CONFIG = {
     ),
 }
 
-_PYTHON_CODING_AGENT_MODEL = "gemini-3-flash-preview"
-_PYTHON_CODING_AGENT_MODEL_CONFIG = {
+_AGENT_STARTER_MODEL = "gemini-3-flash-preview"
+_AGENT_STARTER_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
@@ -34,26 +38,50 @@ _PYTHON_CODING_AGENT_MODEL_CONFIG = {
     ),
 }
 
-# python ./coding-agent.py --output ./coding-agent-output  --deps ./requirements.txt --coding-tools ./coding-tools.txt --tasks tasks/
+# For google search tool
+_SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+_SEARCH_AGENT_MODEL_CONFIG = {
+    "temperature": 1.0,
+    "seed": 42,
+    "top_p": 1.0,
+    "top_k": 60,
+    "thinking_config": types.ThinkingConfig(
+        thinking_budget=-1,
+        include_thoughts=False,
+    ),
+}
+
+# For all web search tools
+_SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+_SUMMARIZE_MODEL_CONFIG = {
+    "temperature": 0.0,
+    "seed": 42,
+    "thinking_config": types.ThinkingConfig(
+        thinking_budget=0,
+        include_thoughts=False,
+    ),
+}
+
+
+tavily_search.summarize_model = _SUMMARIZE_MODEL
+tavily_search.summarize_model_config = _SUMMARIZE_MODEL_CONFIG
+tavily_search.provider_config = _PROVIDER_CONFIG
+
+
+google_search.search_model = _SEARCH_AGENT_MODEL
+google_search.summarize_model = _SUMMARIZE_MODEL
+google_search.search_options = {**_SEARCH_AGENT_MODEL_CONFIG, **_PROVIDER_CONFIG}
+google_search.summarize_options = {**_SUMMARIZE_MODEL_CONFIG, **_PROVIDER_CONFIG}
+
+
+# python ./swarm-agent.py --output ./swarm-agent-output --tasks tasks/
 if __name__ == "__main__":
-    print("Coding Agent")
+    print("Deep Research Swarm Agent")
     import argparse
 
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument(
         "--output", type=str, required=True, help="The output of the application"
-    )
-    parser.add_argument(
-        "--deps",
-        type=str,
-        required=False,
-        help="The path to the requirements.txt file",
-    )
-    parser.add_argument(
-        "--coding-tools",
-        type=str,
-        required=False,
-        help="The path to the coding tools file",
     )
     parser.add_argument(
         "--tasks",
@@ -62,32 +90,6 @@ if __name__ == "__main__":
         help="The directory of tasks, md or txt files",
     )
     args = parser.parse_args()
-
-    perf_libs = []
-    if args.deps:
-        with open(args.deps, "r") as f:
-            perf_libs = f.read().splitlines()
-
-    coding_tools = []
-    if args.coding_tools:
-        with open(args.coding_tools, "r") as f:
-            coding_tools = f.read().splitlines()
-            # coding_tools:
-            # get_stock_data
-            # get_currency_exchange_rate
-            # ...
-            coding_tools = [CODING_TOOLS[tool] for tool in coding_tools]
-
-    agent = TinyCodingAgent(
-        name="python-coding-agent",
-        model=_PYTHON_CODING_AGENT_MODEL,
-        output_root=args.output,
-        perf_libs=perf_libs,
-        coding_tools=coding_tools,
-        genai_stuff=_PROVIDER_CONFIG,
-        **_PYTHON_CODING_AGENT_MODEL_CONFIG,
-    )
-
     if args.tasks:
         task_files = list(Path(args.tasks).glob("*.md")) + list(
             Path(args.tasks).glob("*.txt")
@@ -115,6 +117,23 @@ if __name__ == "__main__":
     if not task:
         raise ValueError("No tasks found")
 
-    format_text(task, "⚑ Coding Agent")
-    result = agent(contents=task)
-    format_text(result.text, "❀ Coding Agent result")
+    team = SwarmAgent(
+        output=args.output,
+        model=_AGENT_STARTER_MODEL,
+        model_config=_AGENT_STARTER_MODEL_CONFIG,
+        provider=_PROVIDER_CONFIG,
+        tools=[tavily_search, google_search],
+    )
+    format_text(
+        task,
+        "⚑ Deep Research (swarm agent), flexible style collaboration among agents to complete the task",
+        "green",
+    )
+
+    result = team(task)
+
+    format_text(
+        result.text,
+        "❀ Deep Research (swarm agent) result, flexible style collaboration among agents to complete the task",
+        "green",
+    )
