@@ -8,8 +8,8 @@ from typing import Any, Callable, Optional
 
 from google.genai import types
 from ollama import ChatResponse
-from typing_extensions import TypedDict
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 from ..tools.buildins.core import (
     create_work_plan,
@@ -57,14 +57,14 @@ Complete task based on <instruction>.
 - **Always** At the very beginning, use create_work_plan to create a work-plan that outlines each step required to complete the task.
 - **Always** Execute the steps in the work-plan **STEP-BY-STEP aka. ONE-BY-ONE**.
 - **Always** use update_memory to record your actions after calling any tool or receiving response. **WARNING**: This does not include work-plan (step status) update actions, as work-plan has its own separate isolated storage mechanism.
-- After completing a step of the work-plan, **always** use update_work_plan to update the status of that step in work-plan.   
+- After completing a step of the work-plan, **always** use update_work_plan to update the status of that step in work-plan.
 - **Always** use reflect to perform reflection for decision-making, after updating a step status in work-plan. When reflecting, always include:
     1. What you have done **in detail**.
     2. What results you have obtained **in detail**.
     3. What you will do next **in detail**.
     4. Shall I stop working or continue to work **regarding the status of the steps in the work-plan**?
 - **Always** use reflect to perform reflection for decision-making, after calling a tool. When reflecting, always include:
-    1. Understand the tool call result. 
+    1. Understand the tool call result.
     2. What shall I do next **regarding the status of the steps in the work-plan**?
     3. Shall I stop working or continue to work **regarding the status of the steps in the work-plan**?
 - **Always** use reflect to perform reflection for decision-making, after updating memory. When reflecting, always include:
@@ -83,7 +83,7 @@ Complete task based on <instruction>.
     - For completed items: [✅] followed by the task description
     - For incomplete items: [🟡] followed by the task description
     - For in-progress items: [🔄] followed by the task description
-    - For failed items: [❌] followed by the task description 
+    - For failed items: [❌] followed by the task description
     For example:
 - [✅] Task 1
 - [🟡] Task 2
@@ -98,7 +98,7 @@ We have the following default storage mechanisms in filesystem (if the user **do
 Work-plan storage: {work_plan_storage}
 Memory storage: {memory_storage}
 Reflection storage: {reflection_storage}
-Are you a subagent? {is_subagent}, 
+Are you a subagent? {is_subagent},
 - if **yes (true)**, you have storage to save your work result: {subagent_result_storage}
 - if **no (false)**, the work-result storage could be specified by the user based on the task description.
 </storage-instruction>
@@ -154,6 +154,7 @@ OLLAMA_STUFF_DEFAULTS: OllamaStuffDict = {
 
 
 class TinyAgent:
+    is_busy = False
 
     def __init__(
         self,
@@ -365,7 +366,7 @@ class TinyAgent:
         for subagent in upcoming_subagents:
             if not isinstance(subagent, TinyAgent):
                 raise TypeError(f"{subagent} is not a TinyAgent instance")
-            if not hasattr(subagent, "_is_async"):
+            if not subagent.is_subagent:
                 raise TypeError(
                     f"{subagent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
                 )
@@ -392,20 +393,26 @@ class TinyAgent:
             **{subagent.name: subagent for subagent in upcoming_subagents},
         }
 
-    def append_subagents(self, subagent: "TinyAgent"):
-        if not hasattr(subagent, "_is_async"):
+    def append_subagents(self, agent: "TinyAgent | list[TinyAgent]"):
+        # Support both single subagent and list of subagents
+        if isinstance(agent, list):
+            for sub in agent:
+                self.append_subagents(sub)
+            return
+
+        if not agent.is_subagent:
             raise TypeError(
-                f"{subagent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
+                f"{agent} is not decorated by @subagent() from tiny_agent.subagent.decorator"
             )
-        if subagent.name == self.name:
+        if agent.name == self.name:
             raise ValueError(
-                f"Subagent name '{subagent.name}' cannot be the same as the parent agent name"
+                f"Subagent name '{agent.name}' cannot be the same as the parent agent name"
             )
 
-        if subagent.name in self.subagents:
-            raise ValueError(f"Subagent name '{subagent.name}' already exists")
+        if agent.name in self.subagents:
+            raise ValueError(f"Subagent name '{agent.name}' already exists")
 
-        self.subagents[subagent.name] = subagent
+        self.subagents[agent.name] = agent
 
     def get_subagent_by_name(self, name: str) -> Optional["TinyAgent"]:
         return self.subagents.get(name)
@@ -447,24 +454,46 @@ class TinyAgent:
 
     def __call__(
         self, contents: str, **kwargs
-    ) -> types.GenerateContentResponse | ChatResponse | None:
+    ) -> types.GenerateContentResponse | ChatResponse | str | None:
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
             contents: The contents string to pass to the agent.
             **kwargs: A dict try to override the current modelconfig.
-        """
 
+        Returns:
+            The response from the agent (GenAI, Ollama compatible, or str/None if no valid response).
+        """
+        self.is_busy = True
+
+        # Thread-safety check:
+        # - Regular agents (not subagent): must be single-threaded
+        # - Sync subagents (is_subagent=True, _is_async=False): must be single-threaded
+        # - Async subagents (is_subagent=True, _is_async=True): can be multi-threaded
         if threading.get_ident() != self._owner_thread_id:
-            raise RuntimeError(
-                "TinyAgent instance is not thread-safe; calling __call__ from a different thread is not allowed"
-            )
+            if not self.is_subagent:
+                # Regular agent - must run in owner thread
+                raise RuntimeError(
+                    f"Regular agent '{self.name}' (id: {self.agent_id}) is not thread-safe; "
+                    f"calling __call__ from a different thread is not allowed. "
+                    f"Owner thread: {self._owner_thread_id}, current thread: {threading.get_ident()}"
+                )
+            elif not getattr(self, "_is_async", False):
+                # Sync subagent - must run in owner thread
+                raise RuntimeError(
+                    f"Sync subagent '{self.name}' (id: {self.agent_id}) is not thread-safe; "
+                    f"calling __call__ from a different thread is not allowed. "
+                    f"Owner thread: {self._owner_thread_id}, current thread: {threading.get_ident()}"
+                )
+            # Async subagent - multi-threading allowed, no exception raised
 
         prompt = f"""
+**YOU ARE:** {self.name}.
+
 {SUBAGENT_HEADNOTE.format(subagent_instruction=self.__str__(), output_path=os.path.join(self.output_location, "result.md")) if self.is_subagent else ""}
 
 {contents.strip()}
-           
+
 {self.get_main_work_instruction().strip()}
 
 {STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"), is_subagent=self.is_subagent, subagent_result_storage=os.path.join(self.output_location, "result.md") if self.is_subagent else "")}
@@ -472,49 +501,57 @@ class TinyAgent:
 {SUBAGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()
 
-        if self.genai_stuff:
-            if kwargs:
-                self.genai_stuff["config"] = types.GenerateContentConfig(
-                    **{
-                        **self.genai_stuff["config"].model_dump(exclude_none=True),
-                        # Explicitly restore object references to prevent serialization issues
-                        "http_options": self.genai_stuff.get("http_options"),
-                        "tools": self.tools,
-                        "system_instruction": self.genai_stuff.get("system_instruction"),
-                        "automatic_function_calling": types.AutomaticFunctionCallingConfig(
-                            disable=False,
-                            maximum_remote_calls=99999999,
-                            ignore_call_history=False,
-                        ),
-                        **kwargs,
-                    }
-                )
+        try:
+            if self.genai_stuff:
+                if kwargs:
+                    self.genai_stuff["config"] = types.GenerateContentConfig(
+                        **{
+                            **self.genai_stuff["config"].model_dump(exclude_none=True),
+                            # Explicitly restore object references to prevent serialization issues
+                            "http_options": self.genai_stuff.get("http_options"),
+                            "tools": self.tools,
+                            "system_instruction": self.genai_stuff.get(
+                                "system_instruction"
+                            ),
+                            "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+                                disable=False,
+                                maximum_remote_calls=99999999,
+                                ignore_call_history=False,
+                            ),
+                            **kwargs,
+                        }
+                    )
 
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=self.genai_stuff["config"],
-            )
-            return response
-
-        if self.ollama_stuff:
-            if kwargs:
-                from functools import partial
-
-                self.ollama_stuff["config"] = partial(
-                    ollama_automatic_function_calling,
-                    self.client.chat,
+                response = self.client.models.generate_content(
                     model=self.model,
-                    max_turns=99999999,
-                    tools=self.tools,
-                    **kwargs,
+                    contents=prompt,
+                    config=self.genai_stuff["config"],
                 )
+                return response
 
-            messages = [
-                {"role": "system", "content": self.ollama_stuff["system_instruction"]},
-                {"role": "user", "content": prompt},
-            ]
-            response, _ = self.ollama_stuff["config"](messages=messages)
-            return response
+            if self.ollama_stuff:
+                if kwargs:
+                    from functools import partial
+
+                    self.ollama_stuff["config"] = partial(
+                        ollama_automatic_function_calling,
+                        self.client.chat,
+                        model=self.model,
+                        max_turns=99999999,
+                        tools=self.tools,
+                        **kwargs,
+                    )
+
+                messages = [
+                    {
+                        "role": "system",
+                        "content": self.ollama_stuff["system_instruction"],
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+                response, _ = self.ollama_stuff["config"](messages=messages)
+                return response
+        finally:
+            self.is_busy = False
 
         raise ValueError("Neither genai nor ollama stuff is specified")

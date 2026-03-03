@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from ...utils.print_utils import format_text
 from ..decorator import *
 
@@ -15,16 +16,21 @@ def read_work_plan() -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        with open(f"{agent_output_location}/work_plan.md", "r") as f:
+        file_location = f"{agent_output_location}/work_plan.md"
+        with open(file_location, "r") as f:
             work_plan = f.read()
-            format_text(work_plan, f"{agent_name}-{agent_id} | Read Work-plan", "green")
-        return f"""Work-plan (saved in file:{agent_output_location}/work_plan.md):
+            format_text(
+                work_plan,
+                f"{agent_name}-{agent_id} | Read Work-plan | {file_location}",
+                "green",
+            )
+        return f"""Work-plan (saved in file:{file_location}):
 {work_plan}
 """
     except FileNotFoundError:
         format_text(
             "**No work-plan has been created yet.",
-            f"{agent_name}-{agent_id} | Read Work-plan",
+            f"{agent_name}-{agent_id} | Read Work-plan | {file_location}",
             "yellow",
         )
         return "**No work-plan has been created yet."
@@ -50,11 +56,18 @@ def create_work_plan(work_plan: str) -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        Path(agent_output_location).mkdir(parents=True, exist_ok=True)
-        with open(f"{agent_output_location}/work_plan.md", "w") as f:
+        file_location = str(
+            (p := Path(agent_output_location)).mkdir(parents=True, exist_ok=True)
+            or p / "work_plan.md"
+        )
+        with open(file_location, "w") as f:
             f.write(work_plan)
-            format_text(work_plan, f"{agent_name}-{agent_id} | Create Work-plan", "red")
-        return f"""Work-plan created (saved in file: {agent_output_location}/work_plan.md):
+            format_text(
+                work_plan,
+                f"{agent_name}-{agent_id} | Create Work-plan | {file_location}",
+                "red",
+            )
+        return f"""Work-plan created (saved in file: {file_location}):
 {work_plan}
 """
     except Exception as e:
@@ -79,12 +92,18 @@ def update_work_plan(updated_work_plan: str) -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        with open(f"{agent_output_location}/work_plan.md", "w") as f:
+        file_location = str(
+            (p := Path(agent_output_location)).mkdir(parents=True, exist_ok=True)
+            or p / "work_plan.md"
+        )
+        with open(file_location, "w") as f:
             f.write(updated_work_plan)
             format_text(
-                updated_work_plan, f"{agent_name}-{agent_id} | Update Work-plan", "red"
+                updated_work_plan,
+                f"{agent_name}-{agent_id} | Update Work-plan | {file_location}",
+                "red",
             )
-        return f"""Updated work-plan(saved in file: {agent_output_location}/work_plan.md):
+        return f"""Updated work-plan(saved in file: {file_location}):
 {updated_work_plan}"""
     except Exception as e:
         import traceback
@@ -108,12 +127,19 @@ def reflect(reflection: str) -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        Path(agent_output_location).mkdir(parents=True, exist_ok=True)
-        with open(f"{agent_output_location}/reflection.md", "a") as f:
+        file_location = str(
+            (p := Path(agent_output_location)).mkdir(parents=True, exist_ok=True)
+            or p / "reflection.md"
+        )
+        with open(file_location, "a") as f:
             f.write(reflection)
             f.write("\n")
-            format_text(reflection, f"{agent_name}-{agent_id} | Reflect", "red")
-        return f"""Reflection recorded(file: {agent_output_location}/reflection.md):
+            format_text(
+                reflection,
+                f"{agent_name}-{agent_id} | Reflect | {file_location}",
+                "red",
+            )
+        return f"""Reflection recorded(file: {file_location}):
 {reflection}"""
     except Exception as e:
         import traceback
@@ -134,15 +160,20 @@ def read_memory() -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        with open(f"{agent_output_location}/memory.md", "r") as f:
+        file_location = f"{agent_output_location}/memory.md"
+        with open(file_location, "r") as f:
             memory = f.read()
-            format_text(memory, f"{agent_name}-{agent_id} | Read memory", "green")
-        return f"""Memory (saved in file: {agent_output_location}/memory.md):
+            format_text(
+                memory,
+                f"{agent_name}-{agent_id} | Read memory | {file_location}",
+                "green",
+            )
+        return f"""Memory (saved in file: {file_location}):
 {memory}"""
     except FileNotFoundError:
         format_text(
             "No memory has been created yet.",
-            f"{agent_name}-{agent_id} | Read memory",
+            f"{agent_name}-{agent_id} | Read memory | {file_location}",
             "yellow",
         )
         return "No memory has been created yet."
@@ -165,12 +196,19 @@ def update_memory(entry: str) -> str:
     agent_name = ctx["agent_info"]["agent_name"]
     agent_id = ctx["agent_info"]["agent_id"]
     try:
-        Path(agent_output_location).mkdir(parents=True, exist_ok=True)
-        with open(f"{agent_output_location}/memory.md", "a") as f:
+        file_location = str(
+            (p := Path(agent_output_location)).mkdir(parents=True, exist_ok=True)
+            or p / "memory.md"
+        )
+        with open(file_location, "a") as f:
             f.write(entry)
             f.write("\n")
-            format_text(entry, f"{agent_name}-{agent_id} | Update memory", "red")
-        return f"""New memory entry appended (saved in file: {agent_output_location}/memory.md):
+            format_text(
+                entry,
+                f"{agent_name}-{agent_id} | Update memory | {file_location}",
+                "red",
+            )
+        return f"""New memory entry appended (saved in file: {file_location}):
 {entry}"""
     except Exception as e:
         import traceback
