@@ -49,8 +49,8 @@ _AGENT_REGRESSION_ANALYSIS_MODEL_CONFIG = {
     ),
 }
 
-_AGENT_REVISION_MODEL = "gemini-3-flash-preview"
-_AGENT_REVISION_MODEL_CONFIG = {
+_AGENT_CRITICAL_ANALYSIS_MODEL = "gemini-3-flash-preview"
+_AGENT_CRITICAL_ANALYSIS_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
@@ -61,8 +61,8 @@ _AGENT_REVISION_MODEL_CONFIG = {
     ),
 }
 
-_AGENT_CRITICAL_ANALYSIS_MODEL = "gemini-3-flash-preview"
-_AGENT_CRITICAL_ANALYSIS_MODEL_CONFIG = {
+_AGENT_REVISION_MODEL = "gemini-3-flash-preview"
+_AGENT_REVISION_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
