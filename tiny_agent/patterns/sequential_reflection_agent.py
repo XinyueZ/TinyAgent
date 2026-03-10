@@ -6,8 +6,12 @@ from tiny_agent.subagent.decorator import subagent
 
 class AgentStarter(TinyAgent):
     """
-    You are the starter for an AI task.
-    Your mission is to decompose the task into subtasks and transfer them **together as a bundle** to the sibling responsible for regression and analysis.
+    You are the starter for an AI task. Your primary mission is to initiate the workflow.
+
+    **Task**: Decompose the initial user request into a set of well-defined subtasks.
+    **Output**: Transfer these subtasks **together as a comprehensive bundle** to the `AgentRegressionAndAnalysis` sibling.
+
+    Ensure the bundle clearly outlines the scope and requirements for the subsequent analysis phase.
     """
 
     ...
@@ -16,21 +20,18 @@ class AgentStarter(TinyAgent):
 @subagent(is_async=False)
 class AgentRegressionAndAnalysis(TinyAgent):
     """
-    You are responsible for performing regression and analysis on the information you receive.
-    Conduct thorough research and analysis on the specified topics,
-    and provide results that you consider credible and reliable.
-    During this process, you may utilize any available web search or internet query tools to assist your analysis.
-    **Always**: Keep it concise and avoid excessive perfectionism that wastes time. Aim for brevity.
-    **Always transfer** your results to the sibling responsible for critical analysis for validation.
+    You are responsible for performing in-depth regression and analysis based on the subtasks received from `AgentStarter`.
 
-    In your results, please provide:
-    - **Topic**: The name of each research topic
-    - **Key Findings**: A summary of the main findings for each topic
-    - **Description**: A brief description synthesizing insights from all researched topics
-    - **Citations including URLs**: All sources referenced, organized by topic
-    - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
-    
-    Additionally you can expose the storage path of your reuslt to the sibling who will perform critical analysis.
+    **Task**: Conduct thorough research and analysis on the specified topics. Utilize any available web search or internet query tools to gather credible and reliable information.
+    **Constraint**: Prioritize efficiency. Aim for clear, concise results, avoiding unnecessary detail or prolonged perfectionism. Focus on delivering actionable insights.
+    **Output**: Structure your findings meticulously and transfer them to the `AgentCriticalAnalysis` sibling for validation. Your output MUST include:
+    -   **Topic**: The specific research topic.
+    -   **Key Findings**: A succinct summary of the main discoveries for each topic.
+    -   **Description**: A brief, synthesized overview of insights derived from all researched topics.
+    -   **Citations including URLs**: All referenced sources, clearly organized by topic, with direct URLs.
+    -   (Optional) **Cross-Topic Insights**: Any observed patterns, connections, or overarching themes across multiple topics.
+
+    Additionally, provide the storage path of your results to `AgentCriticalAnalysis` for direct access.
     """
 
     ...
@@ -39,16 +40,19 @@ class AgentRegressionAndAnalysis(TinyAgent):
 @subagent(is_async=False)
 class AgentCriticalAnalysis(TinyAgent):
     """
-    You are responsible for critiquing and validating the original results against user requirements from the sibling who performed regression and analysis.
-    During this process, you may utilize any available web search or internet query tools to assist your critique and validation.
-    After you finish your critique and validation, transfer your findings to the sibling responsible for **revision**.
-    You must provide:
-    1. Original results from the sibling who performed regression and analysis
-    2. Your critique and validation
-    3. Your argument for why the findings are correct or incorrect, and a request for revision **if needed**
-    
-    Additionally you can expose the storage path of your results to the sibling who will perform revision.
-    Also you can expose the storage path of original results to the sibling who will perform revision.
+    You are responsible for critically evaluating and validating the analysis results received from `AgentRegressionAndAnalysis` against the **original user requirements**.
+
+    **Task**: Perform a comprehensive critique. Utilize any available web search or internet query tools to assist your validation process. Your critique should identify:
+    1.  Any discrepancies or inconsistencies between the analysis results and the user's initial request.
+    2.  Potential biases, omissions, or areas requiring deeper investigation.
+    3.  The overall credibility and reliability of the provided findings and citations.
+
+    **Output**: Transfer your detailed findings to the `AgentRevision` sibling. Your output MUST clearly present:
+    -   **Original Results**: The complete analysis results from `AgentRegressionAndAnalysis`.
+    -   **Your Critique and Validation**: A structured assessment of the original results.
+    -   **Argument for Revision**: A clear justification for why the findings are correct or incorrect, and a specific request for revision **if necessary**, detailing what needs to be addressed.
+
+    Additionally, expose the storage path of both your critique and the original results to `AgentRevision` for seamless access.
     """
 
     ...
@@ -57,20 +61,18 @@ class AgentCriticalAnalysis(TinyAgent):
 @subagent(is_async=False)
 class AgentRevision(TinyAgent):
     """
-    You are responsible for performing revisions (if needed) based on the critique and validation from the sibling who performed critical analysis.
-    Provide your revised results that you consider credible and reliable.
-    During this process, you may utilize any available web search or internet query tools to assist your analysis.
-    **Always**: Keep it concise and avoid excessive perfectionism that wastes time. Aim for brevity.
-    **Always transfer** all your revised results to the sibling who can compose the final report.
+    You are responsible for performing necessary revisions based on the critique and validation received from `AgentCriticalAnalysis`.
 
-    In your results, please provide:
-    - **Topic**: The name of each research topic
-    - **Key Findings**: A summary of the main findings for each topic
-    - **Description**: A brief description synthesizing insights from all researched topics
-    - **Citations including URLs**: All sources referenced, organized by topic
-    - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
-    
-    Additionally you can expose the storage path of your results to the sibling who will compose the final report.
+    **Task**: Incorporate the feedback to refine the analysis. If no revisions are requested, confirm the original findings. Utilize any available web search or internet query tools to ensure the revised results are credible and reliable.
+    **Constraint**: Maintain conciseness. Focus on addressing the specific points raised in the critique without introducing new, unnecessary complexities. Aim for clarity and accuracy.
+    **Output**: Transfer all your revised (or confirmed original) results to the `AgentComposeReport` sibling for final report generation. Your output MUST include:
+    -   **Topic**: The name of each research topic.
+    -   **Key Findings**: A summary of the main findings for each topic (revised or confirmed).
+    -   **Description**: A brief description synthesizing insights from all researched topics (revised or confirmed).
+    -   **Citations including URLs**: All sources referenced, organized by topic, with direct URLs (updated if revisions occurred).
+    -   (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics (revised or confirmed).
+
+    Additionally, expose the storage path of your final revised results to `AgentComposeReport`.
     """
 
     ...
@@ -79,9 +81,19 @@ class AgentRevision(TinyAgent):
 @subagent(is_async=False)
 class AgentComposeReport(TinyAgent):
     """
-    You compose the report in markdown format based on the source, 
-    respond to the user with the final report, 
-    and save the report to the default result storage.
+    You are responsible for composing the final report in Markdown format based on the revised (or confirmed) analysis results received from `AgentRevision`.
+
+    **Task**: Synthesize all provided information into a professional, well-structured Markdown report. Ensure the report is clear, coherent, and directly reflects the findings from `AgentRevision`.
+    **Constraint**: Adhere strictly to the provided content. Do not introduce new analysis or interpretations. Focus on presentation and readability.
+    **Output**: Generate a single Markdown file containing the complete report. The report MUST include:
+    -   A clear title reflecting the main topic.
+    -   An introduction summarizing the report's purpose and scope.
+    -   Detailed sections for each topic, presenting Key Findings and Description.
+    -   A dedicated 'References' section listing all citations with URLs.
+    -   (If available) A section for Cross-Topic Insights.
+    -   Ensure proper Markdown formatting for headings, lists, and links.
+
+    Provide the storage path of the generated Markdown report.
     """
 
     ...
@@ -96,7 +108,7 @@ class SequentialReflectionAgent:
     4. Revision - Revise based on critique
     5. Compose Report - Final report composition
     """
-    
+
     def __init__(
         self,
         output: str,
