@@ -2,16 +2,15 @@
 import warnings
 
 warnings.filterwarnings("ignore")
-
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 from google.genai import types
 
+from tiny_agent.patterns.sequential_reflection_agent import SequentialReflectionAgent
 from tiny_agent.tools.web.tools import google_search, tavily_search
 from tiny_agent.utils.print_utils import format_text
-from tiny_agent.patterns.sequential_reflection_agent import SequentialReflectionAgent
 
 load_dotenv()
 
@@ -74,9 +73,9 @@ _AGENT_CRITICAL_ANALYSIS_MODEL_CONFIG = {
     ),
 }
 
-_AGENT_COMPOSE_REPORT_MODEL = "gemini-2.5-flash"
+_AGENT_COMPOSE_REPORT_MODEL = "gemini-3-flash-preview"
 _AGENT_COMPOSE_REPORT_MODEL_CONFIG = {
-    "temperature": 1.0,
+    "temperature": 0.0,
     "seed": 42,
     "top_p": 1.0,
     "top_k": 60,
@@ -87,25 +86,25 @@ _AGENT_COMPOSE_REPORT_MODEL_CONFIG = {
 }
 
 # For google search tool
-_SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+_SEARCH_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
 _SEARCH_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
     "top_k": 60,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=-1,
+        thinking_level=types.ThinkingLevel.HIGH,
         include_thoughts=False,
     ),
 }
 
 # For all web search tools
-_SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+_SUMMARIZE_MODEL = "gemini-3.1-flash-lite-preview"
 _SUMMARIZE_MODEL_CONFIG = {
     "temperature": 0.0,
     "seed": 42,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=0,
+        thinking_level=types.ThinkingLevel.LOW,
         include_thoughts=False,
     ),
 }
@@ -164,7 +163,7 @@ if __name__ == "__main__":
 
     if not task:
         raise ValueError("No tasks found")
-    
+
     team = SequentialReflectionAgent(
         output=args.output,
         starter_model=_AGENT_STARTER_MODEL,
@@ -188,7 +187,8 @@ if __name__ == "__main__":
     )
     format_text(task, "⚑ Deep Research (sequential agent with reflection)")
 
-
     result = team(task)
 
-    format_text(result.text, "❀ Deep Research (sequential agent with reflection) result")
+    format_text(
+        result.text, "❀ Deep Research (sequential agent with reflection) result"
+    )
