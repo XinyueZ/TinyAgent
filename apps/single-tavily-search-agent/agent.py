@@ -3,6 +3,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
