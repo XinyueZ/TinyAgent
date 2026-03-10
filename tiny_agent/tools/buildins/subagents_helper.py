@@ -2,19 +2,22 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from tiny_agent.agent import AgentResponse
 from tiny_agent.agent.agent_manager import AgentManager
 from tiny_agent.utils.print_utils import format_text
 
 from ..decorator import tool
+
+if TYPE_CHECKING:
+    from tiny_agent.agent import AgentResponse, TinyAgent
 
 _locks_guard = threading.Lock()
 _transfer_to_subagent_locks: dict[str, threading.Lock] = {}
 _transfer_to_subagents_locks: dict[str, threading.Lock] = {}
 
 
-def _agent_response_to_str(agent_response: AgentResponse) -> str:
+def _agent_response_to_str(agent_response: "AgentResponse") -> str:
     """Convert AgentResponse to string based on its type.
 
     Args:
@@ -56,7 +59,7 @@ def _get_lock(lock_map: dict[str, threading.Lock], agent_id: str) -> threading.L
         return lock
 
 
-def _org_result(sub_agent, agent_response: AgentResponse) -> str:
+def _org_result(sub_agent: "TinyAgent", agent_response: "AgentResponse") -> str:
     output_path = f"{sub_agent.output_location}/result.md"
     response_text = _agent_response_to_str(agent_response)
 

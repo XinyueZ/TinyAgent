@@ -4,7 +4,7 @@ import threading
 import time
 import uuid
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from google.genai import types
 from pydantic import BaseModel
@@ -34,9 +34,11 @@ from ..tools.buildins.utils import (
     get_current_datetime_in_utc,
 )
 from ..tools.decorator import _agent_info_context
-from . import AgentResponse
 from .agent_manager import AgentManager
 from .ollama_utils import ollama_automatic_function_calling
+
+if TYPE_CHECKING:
+    from . import AgentResponse
 
 MAX_RETRY_ATTEMPTS = 5
 
@@ -457,7 +459,7 @@ class TinyAgent:
 
         return AGENT_WORK_INSTRUCTIONS
 
-    def __call__(self, contents: str, **kwargs) -> AgentResponse:
+    def __call__(self, contents: str, **kwargs) -> "AgentResponse":
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
