@@ -3,6 +3,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from tiny_agent.agent import AgentResponse
 from tiny_agent.agent.agent_manager import AgentManager
 from tiny_agent.utils.print_utils import format_text
 
@@ -11,6 +12,39 @@ from ..decorator import tool
 _locks_guard = threading.Lock()
 _transfer_to_subagent_locks: dict[str, threading.Lock] = {}
 _transfer_to_subagents_locks: dict[str, threading.Lock] = {}
+
+
+def _agent_response_to_str(agent_response: AgentResponse) -> str:
+    """Convert AgentResponse to string based on its type.
+
+    Args:
+        agent_response: Response from agent (GenerateContentResponse, ChatResponse, str, or None)
+
+    Returns:
+        String representation of the response
+    """
+    if agent_response is None:
+        return ""
+
+    if isinstance(agent_response, str):
+        return agent_response
+
+    from google.genai import types
+    from ollama import ChatResponse
+
+    if isinstance(agent_response, types.GenerateContentResponse):
+        return agent_response.text
+
+    if isinstance(agent_response, ChatResponse):
+        if (
+            agent_response.message
+            and agent_response.message.content
+            and len(agent_response.message.content) > 0
+        ):
+            return agent_response.message.content[0]
+        return ""
+
+    return str(agent_response)
 
 
 def _get_lock(lock_map: dict[str, threading.Lock], agent_id: str) -> threading.Lock:
@@ -22,15 +56,29 @@ def _get_lock(lock_map: dict[str, threading.Lock], agent_id: str) -> threading.L
         return lock
 
 
-def _org_result(sub_agent) -> str:
+def _org_result(sub_agent, agent_response: AgentResponse) -> str:
     output_path = f"{sub_agent.output_location}/result.md"
+    response_text = _agent_response_to_str(agent_response)
+
     if Path(output_path).exists():
-        return f"The {sub_agent.name} has finished the task and you can check the result file: {str(output_path)}"
+        return f"""The {sub_agent.name} has finished the **current** task and you can check the result file: {str(output_path)}
+
+==Agent full response==
+{response_text}
+"""
     else:
         memory_path = f"{sub_agent.output_location}/memory.md"
         if Path(memory_path).exists():
-            return f"The {sub_agent.name} has finished the task without a result file, **but** you can check the memory file: {str(memory_path)}"
-        return f"The {sub_agent.name} has finished the task, but no result or memory file has been generated. **Ignore** this agent's work."
+            return f"""The {sub_agent.name} has finished the **current** task without a result file, **but** you can check the memory file: {str(memory_path)}
+
+==Agent full response==
+{response_text}
+"""
+        return f"""The {sub_agent.name} has finished the task, but no result or memory file has been generated. **Ignore** this agent's work.
+
+==Agent full response==
+{response_text}
+"""
 
 
 def _record_transfer_history(parent_agent, content: str):
@@ -98,8 +146,8 @@ def transfer_to_subagent(
 
 {task}""",
         )
-        sa(task)
-        return _org_result(sa)
+        agent_response = sa(task)
+        return _org_result(sa, agent_response)
     finally:
         lock.release()
 
@@ -217,7 +265,7 @@ def transfer_to_subagents(
 
         for name in list(results.keys()):
             sa = parent_agent.get_subagent_by_name(name)
-            results[name] = _org_result(sa)
+            results[name] = _org_result(sa, results[name])
         return results
     finally:
         lock.release()
