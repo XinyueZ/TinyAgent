@@ -4,10 +4,9 @@ import threading
 import time
 import uuid
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from google.genai import types
-from ollama import ChatResponse
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
@@ -37,6 +36,9 @@ from ..tools.buildins.utils import (
 from ..tools.decorator import _agent_info_context
 from .agent_manager import AgentManager
 from .ollama_utils import ollama_automatic_function_calling
+
+if TYPE_CHECKING:
+    from . import AgentResponse
 
 MAX_RETRY_ATTEMPTS = 5
 
@@ -95,6 +97,7 @@ Complete task based on <instruction>.
 STORAGE_INSTRUCTION = """
 We have the following default storage mechanisms in filesystem (if the user **does not specify a storage mechanism**, always use those default ones):
 <storage-instruction>
+Default output location for storage: {default_output_location}
 Work-plan storage: {work_plan_storage}
 Memory storage: {memory_storage}
 Reflection storage: {reflection_storage}
@@ -105,25 +108,29 @@ Are you a subagent? {is_subagent},
 """
 
 SUBAGENTS_FOOTNOTE = """
-You have the following subagents that can help you:
+You have the following subagents that can help you, you must fully understand these subagents' definitions and work in concert with them when it is appropriate and in the right context:
 {subagents}
+
+
 
 <transfer-to-subagent-rule>
 You have two transfer patterns to choose from:
 
-1. **ONE-TO-ONE** (`transfer_to_subagent`): Transfer a task to a single sub-agent. Pass the sub-agent's name as a string. Use this when only one sub-agent is needed for the task.
-2. **ONE-TO-MANY** (`transfer_to_subagents`): Transfer a task to multiple sub-agents in parallel. Pass a list of sub-agent names. Use this when multiple sub-agents can work on the same task or different aspects of the task concurrently. Only sub-agents marked with `is_async=True` can be used with this pattern.
+1. **ONE-TO-ONE** (`transfer_to_subagent`): Transfer a task to a single subagent. Pass the subagent's name as a string. Use this when only one subagent is needed for the task.
+2. **ONE-TO-MANY** (`transfer_to_subagents`): Transfer a task to multiple subagents in parallel. Pass a list of subagent names. Use this when multiple subagents can work on the same task or different aspects of the task concurrently. Only subagents marked with `is_async=True` can be used with this pattern.
 
 **Always** use reflect to perform reflection for decision-making, before transferring. When reflecting, always include:
-1. Do I need one sub-agent or multiple sub-agents for this task?
-2. If multiple, can they work in parallel on the same task, or do they depend on each other's results?
+1. Have I already understood the definition of subagents?
+2. Do I need one subagent or multiple subagents for this task?
+3. If multiple, can they work in parallel on the same task, or do they depend on each other's results?
    - If they can work in parallel → use `transfer_to_subagents` (ONE-TO-MANY).
    - If they depend on each other → use `transfer_to_subagent` (ONE-TO-ONE) sequentially.
-3. Why shall I transfer the task to certain sub-agent(s)?
-4. Is the task description clear and complete? If not, update the task description before transferring.
+4. Why shall I transfer the task to certain subagent(s)?
+5. Is the task description clear and complete? If not, update the task description before transferring.
 
-**Always**: Wait until all sub-agents have completed their tasks before proceeding next step.
+**Always**: Wait until all subagents have completed their tasks before proceeding next step.
 **Always**: When transferring, introduce yourself clearly: "I am [xxxxxx]. My task or row is [yyyyy], now I need [specific request]..."
+**Notice** that it is important to mention who you are and what kind of work you are responsible for during the switching process.
 </transfer-to-subagent-rule>
 """.strip()
 
@@ -452,9 +459,7 @@ class TinyAgent:
 
         return AGENT_WORK_INSTRUCTIONS
 
-    def __call__(
-        self, contents: str, **kwargs
-    ) -> types.GenerateContentResponse | ChatResponse | str | None:
+    def __call__(self, contents: str, **kwargs) -> "AgentResponse":
         """Call the agent with the given contents and optional keyword arguments.
 
         Args:
@@ -496,7 +501,7 @@ class TinyAgent:
 
 {self.get_main_work_instruction().strip()}
 
-{STORAGE_INSTRUCTION.format(work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"), is_subagent=self.is_subagent, subagent_result_storage=os.path.join(self.output_location, "result.md") if self.is_subagent else "")}
+{STORAGE_INSTRUCTION.format(default_output_location=self.output_location, work_plan_storage=os.path.join(self.output_location, "work_plan.md"), memory_storage=os.path.join(self.output_location, "memory.md"), reflection_storage=os.path.join(self.output_location, "reflection.md"), is_subagent=self.is_subagent, subagent_result_storage=os.path.join(self.output_location, "result.md") if self.is_subagent else "")}
 
 {SUBAGENTS_FOOTNOTE.format(subagents={name: str(agent) for name, agent in self.subagents.items()}) if self.subagents_count > 0 else ""}
 """.strip()

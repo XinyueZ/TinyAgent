@@ -39,25 +39,25 @@ _AGENT_STARTER_MODEL_CONFIG = {
 }
 
 # For google search tool
-_SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+_SEARCH_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
 _SEARCH_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
     "top_k": 60,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=-1,
+        thinking_level=types.ThinkingLevel.HIGH,
         include_thoughts=False,
     ),
 }
 
 # For all web search tools
-_SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+_SUMMARIZE_MODEL = "gemini-3.1-flash-lite-preview"
 _SUMMARIZE_MODEL_CONFIG = {
     "temperature": 0.0,
     "seed": 42,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=0,
+        thinking_level=types.ThinkingLevel.MINIMAL,
         include_thoughts=False,
     ),
 }

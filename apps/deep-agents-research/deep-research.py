@@ -3,14 +3,15 @@ import warnings
 from pickle import load
 
 warnings.filterwarnings("ignore")
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 from google.genai import types
 
+from tiny_agent.patterns.deep_agents_research import DeepAgentsResearch
 from tiny_agent.tools.decorator import *
 from tiny_agent.tools.web.tools import google_search, tavily_search
-from tiny_agent.patterns.deep_agents_research import DeepAgentsResearch
 from tiny_agent.utils.print_utils import format_text
 
 load_dotenv()
