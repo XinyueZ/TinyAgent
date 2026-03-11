@@ -1,6 +1,5 @@
 # suppress the warning
 import warnings
-from pickle import load
 
 warnings.filterwarnings("ignore")
 import os
@@ -16,17 +15,6 @@ from tiny_agent.utils.print_utils import format_text
 
 load_dotenv()
 
-_RESEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
-_RESEARCH_AGENT_MODEL_CONFIG = {
-    "temperature": 1.0,
-    "seed": 42,
-    "top_p": 1.0,
-    "top_k": 60,
-    "thinking_config": types.ThinkingConfig(
-        thinking_budget=-1,
-        include_thoughts=False,
-    ),
-}
 
 _PROVIDER_CONFIG = {
     "vertexai": os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "True") == "True",
@@ -51,26 +39,39 @@ _MAIN_AGENT_MODEL_CONFIG = {
     ),
 }
 
+
+_RESEARCH_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
+_RESEARCH_AGENT_MODEL_CONFIG = {
+    "temperature": 1.0,
+    "seed": 42,
+    "top_p": 1.0,
+    "top_k": 60,
+    "thinking_config": types.ThinkingConfig(
+        thinking_level=types.ThinkingLevel.HIGH,
+        include_thoughts=False,
+    ),
+}
+
 # For google search tool
-_SEARCH_AGENT_MODEL = "gemini-2.5-flash-lite"
+_SEARCH_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
 _SEARCH_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
     "top_p": 1.0,
     "top_k": 60,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=-1,
+        thinking_level=types.ThinkingLevel.HIGH,
         include_thoughts=False,
     ),
 }
 
 # For all web search tools
-_SUMMARIZE_MODEL = "gemini-2.5-flash-lite"
+_SUMMARIZE_MODEL = "gemini-3.1-flash-lite-preview"
 _SUMMARIZE_MODEL_CONFIG = {
     "temperature": 0.0,
     "seed": 42,
     "thinking_config": types.ThinkingConfig(
-        thinking_budget=0,
+        thinking_level=types.ThinkingLevel.LOW,
         include_thoughts=False,
     ),
 }
