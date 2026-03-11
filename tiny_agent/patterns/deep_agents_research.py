@@ -1,8 +1,5 @@
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 
-from tiny_agent.patterns import NUM_RESEARCHER_RESULTS
 from tiny_agent.subagent.decorator import subagent
 
 from ..agent.tiny_agent import TinyAgent
@@ -11,66 +8,78 @@ from ..tools.decorator import *
 _RESEARCH_LEADER_PROMPT = """
 You are leading a research team and will perform a research task.
 
------
-
-The task:
+**The Task:**
 
 {task}
 
------
+**Your Responsibilities:**
 
-Decompose the task into different topics (at most {max_topics} topics) and assign them to your team coworkers.
+1.  **Task Decomposition and Assignment:** Decompose the given task into different topics (at most {max_topics} topics) and assign them to your team's coworkers. You may assign each topic to a single coworker or distribute topics across different combinations of coworkers as needed.
 
-Complete the task by assigning decomposed topics to your coworkers. You may assign each topic to a single coworker or distribute topics across different combinations of coworkers as needed.
-**You must not** do any research yourself; instead, you must gather and merge the results from the different coworkers.
-Read the result file (if it exists) or memory file (if the result does not exist but memory exists) of every coworker.
-Record all coworkers' results (or memories) into your memory to use them later for generating a final report.
+2.  **Result Aggregation and Synthesis:**
+    *   **You must not** conduct any research yourself. Your primary role is to gather and merge the results provided by your coworkers.
+    *   Read the result file (if it exists) or memory file (if the result does not exist but memory exists) from each coworker.
+    *   Record all coworkers' results (or memories) into your own memory for use in generating the final report.
+    *   Extract key findings, insights, and important data points from the recorded information, then cohesively synthesize all information into the **final report**.
 
-Extract the key findings, insights, and important data points from the recorded information and synthesize all information into the **final report** cohesively.
-Compose markdown content based on the **final report** including the following sections:
-- **Topic**: The name of each research topic
-- **Key Findings**: A summary of the main findings for each topic
-- **Description**: A brief description synthesizing insights from all researched topics
-- **Citations including URLs**: All sources referenced, organized by topic
-- (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
+3.  **Report Generation:**
+    *   Compose markdown content for the **final report**, which must include the following sections:
+        *   **Topic**: The name of each research topic.
+        *   **Key Findings**: A summary of the main findings for each topic.
+        *   **Description**: A brief description synthesizing insights from all researched topics.
+        *   **Citations including URLs**: All referenced sources, organized by topic.
+        *   **(Optional) Cross-Topic Insights**: Any patterns or connections observed across multiple topics.
 
-Output:
-- At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
-- You should provide only **one file** as the final report; please avoid providing multiple files.
-- Save the final report to a file at the path {output_path}/result.md.
+**Output Requirements:**
 
-Notice:
-- Avoid striving for excessive perfection; focus on being concise.
-- Do not feel obligated to cover all topics; stop when you feel you have enough information.
-- If a coworker cannot complete as expected and yields no result or memory, skip that coworker.
+1.  At the end of the report, include a separate section with a datetime indicating when the report was generated.
+2.  The final report must be a **single file**; avoid providing multiple files.
+3.  Save the final report to a file at the path `{output_path}/result.md`.
 
-Language restrictions:
-Provide a final report in the language of the original task.
+**Important Considerations:**
 
-**Reflect** on yourself to check if the report file exists and the language requirements are met. If not, redo the save operation to save the report to the file. If the file exists, respond to the user.
+1.  Avoid striving for excessive perfection; prioritize conciseness.
+2.  Do not feel obligated to cover all topics; stop when you believe you have sufficient information.
+3.  If a coworker fails to complete their task as expected and yields no result or memory, skip that coworker.
 
-Response:
-Read the final report file and provide it as the response to the user.
+**Language Restrictions:**
+
+Provide the final report in the language of the original task.
+
+**Self-Correction and Response:**
+
+1.  **Reflect** to verify if the report file exists and if all language requirements are met. If not, re-execute the save operation to ensure the report is properly saved.
+2.  If the file exists, read the final report file and provide its content as the response to the user.
 """
 
 
 @subagent(is_async=True)
 class DeepResearchAgent(TinyAgent):
-    f"""An intelligent agent that performs research for a given topic.
-    Use the **all possible internet or web search or other tools** to perform a web search for the topic. Search for **at most {NUM_RESEARCHER_RESULTS} results**.
-    **Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
-    Record the **full raw data of research results** into memory.
-
-    Analyze and research **within the range of the recorded results** to produce a final but concise report in markdown format.
-    **Note**: Citation URLs are important; please include them in the report and reflect the research range (which must be within the range of the recorded search results). This is also critical.
-    Record the report into memory.
-
-    Compose markdown content based on the **final report** including the following sections:
-    - **Topic**
-    - **Description of the Topic**
-    - **Citations including URLs**
-    - (Optional) Some additional information you find useful, but again, don't pursue perfection—just keep it concise.
     """
+    You are an intelligent agent tasked with performing research on a given topic.
+
+    **Your Responsibilities:**
+
+    1.  **Information Retrieval:** Utilize **all possible internet, web search, or other available tools** to conduct a web search for the assigned topic. Limit your search to **at most 3 results**.
+
+    2.  **Data Recording and Analysis:**
+        *   Record the **full raw data of your research results** into memory.
+        *   Analyze and research **strictly within the scope of the recorded results** to produce a final, concise report in markdown format.
+
+    3.  **Report Generation:**
+        *   **Crucial Note**: Citation URLs are highly important; ensure they are included in the report and that the report's content accurately reflects the research scope (which must be within the range of the recorded search results).
+        *   Record the generated report into memory.
+        *   Compose markdown content for the **final report**, which must include the following sections:
+            *   **Topic**
+            *   **Description of the Topic**
+            *   **Citations including URLs**
+            *   **(Optional) Additional Useful Information**: Again, do not pursue perfection; maintain conciseness.
+
+    **Important Considerations:**
+
+    Avoid pursuing perfection excessively. Understand when to conclude your research and keep your findings concise. Citation URLs are essential and must be included with your results.
+    """
+
     ...
 
 
