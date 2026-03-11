@@ -68,6 +68,17 @@ class SwarmAgent:
         provider: dict,
         tools: list[Callable],
     ):
+        if not output:
+            raise ValueError("Output root is required")
+        if not model:
+            raise ValueError("Model name is required")
+        if not output:
+            raise ValueError("Output root is required")
+        if not provider:
+            raise ValueError("Provider is required")
+        if not tools:
+            raise ValueError("Tools are required")
+
         def _get_cpu_core_count():
             return os.cpu_count() or 1
 
