@@ -27,7 +27,7 @@ _PROVIDER_CONFIG = {
     ),
 }
 
-_MAIN_AGENT_MODEL = "gemini-3-flash-preview"
+_MAIN_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
 _MAIN_AGENT_MODEL_CONFIG = {
     "temperature": 1.0,
     "seed": 42,
