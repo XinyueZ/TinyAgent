@@ -177,7 +177,7 @@ def transfer_to_subagents(
     lock = _get_lock(_transfer_to_subagents_locks, parent_agent.agent_id)
     if not lock.acquire(blocking=False):
         return {
-            "__busy__": "transfer_to_subagents is busy for this parent agent (another transfer_to_subagents call is in progress); skipped"
+            "BUSY": "transfer_to_subagents is busy for this parent agent (another transfer_to_subagents call is in progress); skipped"
         }
 
     try:

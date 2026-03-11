@@ -1,61 +1,61 @@
 import os
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 from tiny_agent.patterns import NUM_RESEARCHER_RESULTS
 
-from ..tools.decorator import *
 from ..agent.tiny_agent import TinyAgent
+from ..tools.decorator import *
 
 _RESEARCH_LEADER_PROMPT = """
 You are leading a research team and will perform a research task.
 
------
+---
 
-The task:
+## The task:
 
 {task}
 
------
+---
 
-Decompose the task into different topics (at most {max_topics} topics) and compile them into a list.
-Conduct thorough research on the list **ONLY ONCE**.
-Avoid striving for excessive perfection, and focus on being concise.
-Do not feel obligated to cover all topics; stop when you feel you have enough information.
+## Instructions:
 
-**You don't do** any research yourself; instead, you must merge the results from the different research sources.
-Read the result file (if it exists) or memory file (if the result does not exist but memory exists) for each topic after the research.
+1. **Task Decomposition**: Decompose the task into different topics (at most {max_topics} topics) and compile them into a list.
+2. **Research Coordination**: Conduct thorough research on the list **ONLY ONCE**. Avoid striving for excessive perfection, and focus on being concise. Do not feel obligated to cover all topics; stop when you feel you have enough information.
+3. **Information Integration**: **You don't do** any research yourself; instead, you must merge the results from the different research sources.
+4. **Data Extraction**: Read the result file (if it exists) or memory file (if the result does not exist but memory exists) for each topic after the research. Extract the key findings, insights, and important data points from each result and synthesize all extracted information into a cohesive **final report**. If a topic cannot be researched and yields no result or memory, skip that topic.
+5. **Report Composition**: Compose markdown content based on the **final report** including the following sections:
+   - **Topic**: The name of each research topic
+   - **Key Findings**: A summary of the main findings for each topic
+   - **Description**: A brief description synthesizing insights from all researched topics
+   - **Citations including URLs**: All sources referenced, organized by topic
+   - (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
 
-Extract the key findings, insights, and important data points from each result and synthesize all extracted information into a cohesive **final report**.
-If a topic cannot be researched and yields no result or memory, skip that topic.
+## Output:
 
-Compose markdown content based on the **final report** including the following sections:
-- **Topic**: The name of each research topic
-- **Key Findings**: A summary of the main findings for each topic
-- **Description**: A brief description synthesizing insights from all researched topics
-- **Citations including URLs**: All sources referenced, organized by topic
-- (Optional) **Cross-Topic Insights**: Any patterns or connections observed across multiple topics
+- At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
+- Save the report to a file at the path "{output_path}".
 
-Output:
-At the end of the report, please also add a datetime to represent the time when the report was generated; use a separate section to place it.
-Save the report to a file at the path "{output_path}".
+## Reflection & Response:
 
-**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, response to user..
-
-Response:
-Read out the final report file as the response to the user.
+**Reflect** on yourself to check if the report file exists. If not, redo the save operation to save the report to the file. If the file exists, respond to the user by reading out the final report file as the response.
 """
 
 _RESEARCHER_PROMPT = """
+# Researcher Agent Prompt
+
 Your task is to conduct deep research on the topic: {topic}.
 
-Use the **all possible internet or web search tools** to perform a web search for the topic. Search for **at most {num_results} results**.
-**Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
-Record the **full raw data of research results** into memory.
+## Research Process:
 
-Analyze and research **within the range of the recorded results** to produce a final but concise report in markdown format.
-**Note**: Citation URLs are important; please include them in the report and reflect the research range (which must be within the range of the recorded search results). This is also critical.
-Record the report into memory.
+1. **Web Search**: Use the **all possible internet or web search tools** to perform a web search for the topic. Search for **at most {num_results} results**.
+2. **Efficiency Note**: Avoid pursuing perfection excessively. Know when to stop and keep it concise; just stop when you think it's enough. Citation URLs are important; please include them with the results.
+3. **Data Recording**: Record the **full raw data of research results** into memory.
+4. **Analysis**: Analyze and research **within the range of the recorded results** to produce a final but concise report in markdown format.
+5. **Citation Integrity**: **Note**: Citation URLs are important; please include them in the report and reflect the research range (which must be within the range of the recorded search results). This is critical.
+6. **Memory Storage**: Record the report into memory.
+
+## Report Structure:
 
 Compose markdown content based on the **final report** including the following sections:
 - **Topic**
@@ -63,9 +63,10 @@ Compose markdown content based on the **final report** including the following s
 - **Citations including URLs**
 - (Optional) Some additional information you find useful, but again, don't pursue perfection—just keep it concise.
 
-Save the report to a file at the path "{output_path}".
+## Output & Verification:
 
-**Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
+1. Save the report to a file at the path "{output_path}".
+2. **Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
 """
 
 
@@ -181,7 +182,12 @@ class DeepResearchMultAgentsTool:
                         num_results=NUM_RESEARCHER_RESULTS,
                     )
                 )
-                return (topic, output_path)
+                return (
+                    f"""
+Completed research on '{topic}'. Providing working result file.
+""",
+                    output_path,
+                )
 
             with ThreadPoolExecutor(
                 max_workers=min(len(topics), self._get_cpu_core_count())
@@ -208,7 +214,14 @@ class DeepResearchMultAgentsTool:
                 else:
                     memory_path = Path(result_path).parent / "memory.md"
                     if memory_path.exists():
-                        verified_tuples.append((topic, str(memory_path)))
+                        verified_tuples.append(
+                            (
+                                f"""
+Completed research on '{topic}'. No results generated. Providing working memory file instead."
+""",
+                                str(memory_path),
+                            )
+                        )
                     else:
                         verified_tuples.append(
                             (
