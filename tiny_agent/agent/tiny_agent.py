@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from typing_extensions import TypedDict
 
 from ..tools.buildins.core import (
-    create_work_plan,
+    created_work_plan,
     read_memory,
     read_work_plan,
     reflect,
@@ -49,31 +49,32 @@ You are an autonomous AI agent.
 SUBAGENT_HEADNOTE = """
 {subagent_instruction}
 **ALWAYS** when you have completed, please save the report to file (if the user **does not specify a storage mechanism**, always use this): {output_path}
-**Reflect** on yourself to check if the report file exists. If it does not, redo the save operation to save the report to the file. If the file exists, stop working.
+**Reflect** on yourself immediately after saving to check if the report file exists at `{output_path}`. If it does not, **redo the save operation** until successful. If the file exists, stop working.
 """
 
 AGENT_WORK_INSTRUCTIONS = """
-Complete task based on <instruction>.
+Complete the task strictly based on the following <instruction>.
 
 <instruction>
-- **Always** At the very beginning, use create_work_plan to create a work-plan that outlines each step required to complete the task.
-- **Always** Execute the steps in the work-plan **STEP-BY-STEP aka. ONE-BY-ONE**.
-- **Always** use update_memory to record your actions after calling any tool or receiving response. **WARNING**: This does not include work-plan (step status) update actions, as work-plan has its own separate isolated storage mechanism.
-- After completing a step of the work-plan, **always** use update_work_plan to update the status of that step in work-plan.
-- **Always** use reflect to perform reflection for decision-making, after updating a step status in work-plan. When reflecting, always include:
+- **Always** At the very beginning, create a detailed work-plan that outlines each step required to complete the overall task.
+- **Always** Record the created work-plan via created_work_plan.
+- **Always** Execute the steps in the work-plan **STEP-BY-STEP, i.e., ONE-BY-ONE**.
+- **Always** use `update_memory` to record your actions after calling any tool or receiving a response. **WARNING**: This does not include work-plan (step status) update actions, as work-plan has its own separate isolated storage mechanism.
+- After completing a step of the work-plan, **always** use `update_work_plan` to update the status of that step in the work-plan.
+- **Always** use `reflect` to perform reflection for decision-making, after updating a step status in the work-plan. When reflecting, always include:
     1. What you have done **in detail**.
     2. What results you have obtained **in detail**.
     3. What you will do next **in detail**.
-    4. Shall I stop working or continue to work **regarding the status of the steps in the work-plan**?
-- **Always** use reflect to perform reflection for decision-making, after calling a tool. When reflecting, always include:
+    4. Based on the **actual status of the steps in the work-plan**, should I stop working or continue to work?
+- **Always** use `reflect` to perform reflection for decision-making, after calling a tool. When reflecting, always include:
     1. Understand the tool call result.
-    2. What shall I do next **regarding the status of the steps in the work-plan**?
-    3. Shall I stop working or continue to work **regarding the status of the steps in the work-plan**?
-- **Always** use reflect to perform reflection for decision-making, after updating memory. When reflecting, always include:
-    1. What shall I do next **regarding the status of the steps in the work-plan**?
-    2. Shall I stop working or continue to work **regarding the status of the steps in the work-plan**?
-- **IMPORTANT**: **Never** stop working before all steps in the work-plan are completed with ✅, check the actual work-plan status to determin:
-    - Shall I stop?
+    2. Based on the **actual status of the steps in the work-plan**, what should I do next?
+    3. Based on the **actual status of the steps in the work-plan**, should I stop working or continue to work?
+- **Always** use `reflect` to perform reflection for decision-making, after updating memory. When reflecting, always include:
+    1. Based on the **actual status of the steps in the work-plan**, what should I do next?
+    2. Based on the **actual status of the steps in the work-plan**, should I stop working or continue to work?
+- **IMPORTANT**: **NEVER** stop working before all steps in the work-plan are completed with `[✅]`. Check the actual work-plan status to determine:
+    - Should I stop?
         - If yes, stop working.
         - If no, continue to work.
 </instruction>
@@ -82,10 +83,10 @@ Complete task based on <instruction>.
 - The work-plan shall be created only once if it currently does not exist and shall be operated according to the following protocol:
 - The work-plan should be in a classic checklist format:
     - Each line starts with a checkbox indicating the status in square brackets
-    - For completed items: [✅] followed by the task description
-    - For incomplete items: [🟡] followed by the task description
-    - For in-progress items: [🔄] followed by the task description
-    - For failed items: [❌] followed by the task description
+    - For completed items: `[✅]` followed by the task description
+    - For incomplete items: `[🟡]` followed by the task description
+    - For in-progress items: `[🔄]` followed by the task description
+    - For failed items: `[❌]` followed by the task description
     For example:
 - [✅] Task 1
 - [🟡] Task 2
@@ -95,42 +96,41 @@ Complete task based on <instruction>.
 """.strip()
 
 STORAGE_INSTRUCTION = """
-We have the following default storage mechanisms in filesystem (if the user **does not specify a storage mechanism**, always use those default ones):
+We have the following default storage mechanisms in the filesystem (if the user **does not explicitly specify a storage mechanism**, always prioritize using these default ones):
 <storage-instruction>
-Default output location for storage: {default_output_location}
-Work-plan storage: {work_plan_storage}
-Memory storage: {memory_storage}
-Reflection storage: {reflection_storage}
-Are you a subagent? {is_subagent},
-- if **yes (true)**, you have storage to save your work result: {subagent_result_storage}
-- if **no (false)**, the work-result storage could be specified by the user based on the task description.
+Default output storage location: {default_output_location}
+Work-plan storage path: {work_plan_storage}
+Memory storage path: {memory_storage}
+Reflection storage path: {reflection_storage}
+Are you currently operating as a subagent? {is_subagent}.
+- If **yes (true)**, your work result will be automatically saved to: {subagent_result_storage}
+- If **no (false)**, the work-result storage path can be specified by the user based on the task description.
 </storage-instruction>
 """
 
 SUBAGENTS_FOOTNOTE = """
-You have the following subagents that can help you, you must fully understand these subagents' definitions and work in concert with them when it is appropriate and in the right context:
+You have the following subagents available to assist you. You **MUST** fully understand their definitions and capabilities, and work in concert with them when appropriate and in the correct context:
 {subagents}
 
-
-
 <transfer-to-subagent-rule>
-You have two transfer patterns to choose from:
+You have two task transfer patterns to choose from:
 
-1. **ONE-TO-ONE** (`transfer_to_subagent`): Transfer a task to a single subagent. Pass the subagent's name as a string. Use this when only one subagent is needed for the task.
-2. **ONE-TO-MANY** (`transfer_to_subagents`): Transfer a task to multiple subagents in parallel. Pass a list of subagent names. Use this when multiple subagents can work on the same task or different aspects of the task concurrently. Only subagents marked with `is_async=True` can be used with this pattern.
+1. **ONE-TO-ONE Transfer** (`transfer_to_subagent`): Transfer a task to a single subagent. Pass the subagent\\'s name as a string. Use this when only one subagent is required for the task.
+2. **ONE-TO-MANY Parallel Transfer** (`transfer_to_subagents`): Transfer **multiple distinct tasks** to multiple subagents in parallel. Pass a list of subagent names and a **corresponding list of task descriptions**. Use this when multiple subagents can work on different aspects of the task concurrently, each with its own specific task. **Note**: Only subagents marked with `is_async=True` can be used with this pattern.
 
-**Always** use reflect to perform reflection for decision-making, before transferring. When reflecting, always include:
-1. Have I already understood the definition of subagents?
-2. Do I need one subagent or multiple subagents for this task?
-3. If multiple, can they work in parallel on the same task, or do they depend on each other's results?
-   - If they can work in parallel → use `transfer_to_subagents` (ONE-TO-MANY).
-   - If they depend on each other → use `transfer_to_subagent` (ONE-TO-ONE) sequentially.
-4. Why shall I transfer the task to certain subagent(s)?
-5. Is the task description clear and complete? If not, update the task description before transferring.
+**Before transferring a task, you MUST use `reflect` to perform decision-making reflection. The reflection MUST include:**
+1. Have I fully understood the definitions and capabilities of all subagents?
+2. For the current task, do I need one subagent or multiple subagents to assist in its completion?
+3. If multiple subagents are needed, can they work in parallel independently, or are their results interdependent, requiring sequential execution?
+   - If they can work in parallel independently → Use `transfer_to_subagents` (ONE-TO-MANY Parallel Transfer).
+   - If their results are interdependent → Use `transfer_to_subagent` (ONE-TO-ONE Transfer) sequentially.
+4. What is the **specific reason** for transferring the task to the chosen subagent(s)?
+5. Is the task description for the transfer clear, complete, and unambiguous? If not, **IMMEDIATELY update** the task description before transferring.
 
-**Always**: Wait until all subagents have completed their tasks before proceeding next step.
-**Always**: When transferring, introduce yourself clearly: "I am [xxxxxx]. My task or row is [yyyyy], now I need [specific request]..."
-**Notice** that it is important to mention who you are and what kind of work you are responsible for during the switching process.
+**IMPORTANT**: You **MUST WAIT** until all subagents have completed their tasks and returned results before proceeding to the next step.
+**When transferring, you MUST clearly introduce yourself and your specific request**:
+"I am [xxxxxx]. My task or role is [yyyyy], and now I need [specific request]..."
+It is crucial to state your identity and responsibilities during the switching process for the subagent to understand the context.
 </transfer-to-subagent-rule>
 """.strip()
 
@@ -430,7 +430,7 @@ class TinyAgent:
 
     def get_buildin_tools(self) -> list[Callable | BaseModel]:
         return [
-            create_work_plan,
+            created_work_plan,
             update_work_plan,
             read_work_plan,
             update_memory,

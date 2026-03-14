@@ -42,14 +42,14 @@ def read_work_plan() -> str:
 
 
 @tool()
-def create_work_plan(work_plan: str) -> str:
-    """Create the work-plan.
+def created_work_plan(work_plan: str) -> str:
+    """Record information after creating the work plan.
 
     Args:
-        work_plan: The work-plan content to be created.
+        work_plan: The work plan that has been created.
 
     Returns:
-        A Python `str` confirming that the work-plan was created.
+        A confirmation message indicating the work plan has been recorded.
     """
     ctx = get_tool_context()
     agent_output_location = ctx["agent_info"]["output_location"]
