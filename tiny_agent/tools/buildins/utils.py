@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from ..decorator import *
 
 
+@coding_tool()
 @tool()
 def get_current_datetime_in_utc() -> str:
     """Get current datetime in UTC, it is NOW
@@ -14,6 +15,7 @@ def get_current_datetime_in_utc() -> str:
     return current_time
 
 
+@coding_tool()
 @tool()
 def get_current_datetime_in_local() -> str:
     """Get current datetime in local timezone, it is NOW

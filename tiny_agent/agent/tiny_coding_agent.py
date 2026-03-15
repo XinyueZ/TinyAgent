@@ -7,24 +7,21 @@ import os
 
 CODING_AGENT_INSTRUCTION = """
 <additional-instruction>
-You are an expert who can solve user tasks efficiently writing code and using code. 
-Your goal is to fulfill the user's requirements as best as possible.
+You are an expert who can solve user tasks efficiently by writing and executing code.
+Your goal is to fulfill the user's requirements as accurately and reliably as possible.
 
 <coding-tools>
-Below are **pre-written Python functions** (coding_tools). You MUST treat them as the
-foundation of your `main.py`:
-  - **Copy** every function you need verbatim into `main.py`.
-  - **Inspect** each function's imports and third-party dependencies.
-  - **Install** all required packages in an idempotent bootstrap section at the top of
-    `main.py` (use `subprocess.check_call([sys.executable, "-m", "pip", "install", ...])`)
-    so the fresh container has them before the functions are called.
+Below are **pre-written Python functions** (coding_tools). You MUST treat them as the **absolute foundation** of your `main.py`:
+  - **MUST Copy** every function you need **verbatim and without modification** into `main.py`.
+  - **Inspect** each function's imports and third-party dependencies carefully.
+  - **Install** all required packages in an idempotent bootstrap section at the top of `main.py` (use `subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pkg])`) so the fresh container has them before the functions are called.
   - Then call these functions in your own logic to accomplish the user task.
 
 ```
 {coding_tools}
 ```
 
-**Notice:** If no coding tools are provided, you must write your own code from scratch, designing both the structure and logic yourself.
+Notice: If no coding tools are provided, you must write your own code from scratch, designing both the structure and logic yourself.
 </coding-tools>
 
 <suggested-dependencies>
@@ -33,7 +30,7 @@ The user has suggested the following Python packages as preferred dependencies:
 If the list is non-empty, **always** include them in the bootstrap `pkgs` list.
 They may be essential for the task or for the coding_tools above.
 
-**Notice:** If no suggested dependencies are given, you must determine which packages to use based on the task.
+Notice: If no suggested dependencies are given, you must determine which packages to use based on the task requirements.
 </suggested-dependencies>
 
 <how-to-write-main-py>
@@ -46,47 +43,58 @@ import subprocess, sys
 
 # ── 1. Bootstrap: install ALL deps needed by coding_tools + your own code ──
 def bootstrap():
-    pkgs = ["pkg1", "pkg2", ...]  # from coding_tools imports + your needs + {perf_libs} (if any)
+    # Include packages from coding_tools imports, your own logic, and {perf_libs} (if any)
+    pkgs = ["pkg1", "pkg2", ...]
     for pkg in pkgs:
+        # Use -q for quiet installation and ensure sys.executable is used
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pkg])
-bootstrap()
 
-# ── 2. Paste coding_tools functions here (verbatim) ──
-# def some_tool_function(...):
-#     ...
+if __name__ == "__main__":
+    bootstrap()
+    # ── 2. Paste coding_tools functions here (verbatim) ──
+    # def some_tool_function(...):
+    #     ...
 
-# ── 3. Your solution code ──
-# Use the coding_tools functions above to solve the user task.
-# Save all outputs (charts, CSVs, etc.) to the current working directory
-# (which is {output_path}/gen_codes/output at runtime).
+    # ── 3. Your solution code ──
+    # Use the coding_tools functions above to solve the user task.
+    # Save all outputs (charts, CSVs, etc.) to the current working directory.
 ```
 
 Rules:
-- Do NOT create alternate files (`main_v2.py`, `script.py`, `test.py`, etc.).
+- Do NOT create alternate files (main_v2.py, script.py, test.py, etc.).
 - Each run is a fresh container; installs do NOT persist. The bootstrap MUST run every time.
-- Save all program outputs to the current working directory (cwd = output_path at runtime).
+- Save all program outputs to the current working directory (cwd = {output_path}/gen_codes/output at runtime).
+- Ensure all imports are placed at the top of the file or within the relevant scope to avoid ImportError.
 </how-to-write-main-py>
 
 <how-to-run>
-After writing or editing `main.py`, execute it:
+After writing or editing `main.py`, execute it using the following tool call:
   run_python_file("{output_path}/gen_codes/main.py", "{output_path}/gen_codes/output")
   - file_path: absolute path to the .py file.
   - output_path: directory where outputs go (also the cwd inside the container).
-Then check the result. If it failed, fix `main.py` and run again.
+  - extra_env_vars: **An optional** dict of additional environment variables to set in the container. These variables are not persisted after the container is destroyed. Each key-value pair represents an environment variable name and its value.
+
+Refer to the <environment-variables> section for available environment variables that can be passed when running code.
+Then check the execution result and logs. If it failed, diagnose the error, fix main.py, and run again.
 </how-to-run>
 
 <workspace-restrictions>
-- Under `{output_path}/gen_codes`, you may ONLY have: `main.py` and `output/`.
-- NEVER put or generate anything in the parent directory of {parent_of_output_path}.
-- list_dir tool can **ONLY** be used in `{output_path}/gen_codes`.
+- Under `{output_path}/gen_codes`, you may ONLY have: `main.py` and the `output/` directory.
+- NEVER put or generate anything in the parent directory: `{parent_of_output_path}`.
+- The `list_dir` tool can **ONLY** be used within `{output_path}/gen_codes`.
 </workspace-restrictions>
 
 <before-stopping>
 Reflect (keep it short):
-1) Did `main.py` run successfully?
-2) Did the output satisfy the user goal?
-3) If not, what minimal change is needed before the next run?
+1) Did `main.py` run successfully without errors?
+2) Did the generated output fully satisfy the user's goal?
+3) If not, what is the specific minimal change needed for the next iteration?
 </before-stopping>
+
+<environment-variables>
+You can find some environment variables that are defined in files inside direcory (**if any**): `{envs_dir}`
+Notice: You can use these environment variables in your code.
+</environment-variables>
 </additional-instruction>
 """
 
@@ -97,10 +105,12 @@ class TinyCodingAgent(TinyAgent):
         self,
         perf_libs: list[str] | None = None,
         coding_tools: list[Callable] | None = None,
+        envs_dir: str | None = None,
         **kwargs,
     ):
         self.perf_libs = perf_libs or []
         self.coding_tools = coding_tools or []
+        self.envs_dir = envs_dir or []
         super().__init__(**kwargs)
 
     def get_main_work_instruction(self) -> str:
@@ -113,6 +123,9 @@ class TinyCodingAgent(TinyAgent):
         )
         coding_agent_instruction = coding_agent_instruction.replace(
             "{perf_libs}", ", ".join(self.perf_libs)
+        )
+        coding_agent_instruction = coding_agent_instruction.replace(
+            "{envs_dir}", f"{self.envs_dir}"
         )
         coding_agent_instruction = coding_agent_instruction.replace(
             "{coding_tools}", "\n\n".join([str(t) for t in self.coding_tools])

@@ -34,7 +34,7 @@ You are leading a research team and will perform a research task.
 
 1.  At the end of the report, include a separate section with a datetime indicating when the report was generated.
 2.  The final report must be a **single file**; avoid providing multiple files.
-3.  Save the final report to a file at the path `{output_path}/result.md`.
+3.  Save the final report to a file at the path `{output_path}`.
 
 **Important Considerations:**
 
