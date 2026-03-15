@@ -10,7 +10,11 @@ from tiny_agent.tools.decorator import tool
 
 
 @tool()
-def run_python_file(file_path: str, output_path: str) -> dict[str, str]:
+def run_python_file(
+    file_path: str,
+    output_path: str,
+    extra_env_vars: dict[str, str] | None = None,
+) -> dict[str, str]:
     """Run a Python file inside a sandboxed Docker container.
 
     Args:
@@ -19,6 +23,9 @@ def run_python_file(file_path: str, output_path: str) -> dict[str, str]:
         output_path:
             Host directory where all execution outputs (charts, CSVs, etc.)
             will be written. The directory is created if it does not exist.
+        extra_env_vars: An optional dict of additional environment variables to set in the container.
+            These variables are not persisted after the container is destroyed.
+            Each key-value pair represents an environment variable name and its value.
 
     Container layout:
         /work/code/   ← directory containing file_path (uploaded via tar)
@@ -37,9 +44,9 @@ def run_python_file(file_path: str, output_path: str) -> dict[str, str]:
 
     Returns:
         dict with keys:
-            target_file   – resolved absolute path of file_path
-            output_path   – the output_path argument
-            execute_result – stdout/stderr on success, or error description
+            target_file    - resolved absolute path of file_path
+            output_path    - the output_path argument
+            execute_result - stdout/stderr on success, or error description
     """
 
     if not isinstance(file_path, str) or not file_path.strip():
@@ -102,6 +109,7 @@ def run_python_file(file_path: str, output_path: str) -> dict[str, str]:
                 pids_limit=50,
                 security_opt=["no-new-privileges:true"],
                 environment={
+                    **(extra_env_vars or {}),
                     "HOME": "/work",
                     "PIP_CACHE_DIR": "/work/pip-cache",
                     "PYTHONDONTWRITEBYTECODE": "1",

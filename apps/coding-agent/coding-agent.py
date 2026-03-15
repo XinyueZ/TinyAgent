@@ -5,11 +5,14 @@ warnings.filterwarnings("ignore")
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from google.genai import types
 
 from tiny_agent.agent.tiny_coding_agent import TinyCodingAgent
 from tiny_agent.tools import CODING_TOOLS
 from tiny_agent.tools.decorator import *
+
+load_dotenv()
 
 _PROVIDER_CONFIG = {
     "vertexai": os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "True") == "True",
@@ -34,7 +37,7 @@ _PYTHON_CODING_AGENT_MODEL_CONFIG = {
     ),
 }
 
-# python ./coding-agent.py --output ./coding-agent-output  --deps ./requirements.txt --coding-tools ./coding-tools.txt --tasks tasks/
+# python ./coding-agent.py --output ./coding-agent-output  --deps ./requirements.txt --coding-tools ./coding-tools.txt --envs_dir ./env --tasks tasks/
 if __name__ == "__main__":
     print("Coding Agent")
     import argparse
@@ -54,6 +57,12 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help="The path to the coding tools file",
+    )
+    parser.add_argument(
+        "--envs_dir",
+        type=str,
+        required=False,
+        help="The path of a directory to the environment files",
     )
     parser.add_argument(
         "--tasks",
@@ -84,6 +93,7 @@ if __name__ == "__main__":
         output_root=args.output,
         perf_libs=perf_libs,
         coding_tools=coding_tools,
+        envs_dir=args.envs_dir,
         genai_stuff=_PROVIDER_CONFIG,
         **_PYTHON_CODING_AGENT_MODEL_CONFIG,
     )

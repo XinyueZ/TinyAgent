@@ -2,7 +2,7 @@
 # Run coding-agent in Docker
 #
 # Usage (from anywhere on the host):
-#   /app/CLIs/coding-agent.sh --output <output_dir> --tasks <tasks_dir> [--deps <deps_file>] [--coding-tools <tools_file>]
+#   /app/CLIs/coding-agent.sh --output <output_dir> --tasks <tasks_dir> [--deps <deps_file>] [--coding-tools <tools_file>] [--envs_dir <envs_dir>]
 #
 # Arguments are resolved relative to the caller's working directory,
 # mounted into the container, and rewritten so the Python app can access them.
@@ -35,7 +35,8 @@ fi
 HOST_OUTPUT=""
 HOST_TASKS=""
 HOST_DEPS=""
-HOST_TOOLS=""
+HOST_CODING_TOOLS=""
+HOST_ENVS_DIR=""
 OTHER_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -47,14 +48,16 @@ while [[ $# -gt 0 ]]; do
         --deps)
             HOST_DEPS="$2"; shift 2 ;;
         --coding-tools)
-            HOST_TOOLS="$2"; shift 2 ;;
+            HOST_CODING_TOOLS="$2"; shift 2 ;;
+        --envs_dir)
+            HOST_ENVS_DIR="$2"; shift 2 ;;
         *)
             OTHER_ARGS+=("$1"); shift ;;
     esac
 done
 
 if [[ -z "${HOST_OUTPUT}" || -z "${HOST_TASKS}" ]]; then
-    echo "Usage: $0 --output <output_dir> --tasks <tasks_dir> [--deps <deps_file>] [--coding-tools <tools_file>]"
+    echo "Usage: $0 --output <output_dir> --tasks <tasks_dir> [--deps <deps_file>] [--coding-tools <tools_file>] [--envs_dir <envs_dir>]"
     exit 1
 fi
 
@@ -93,16 +96,28 @@ if [[ -n "${HOST_DEPS}" ]]; then
 fi
 
 # Resolve --coding-tools (File)
-if [[ -n "${HOST_TOOLS}" ]]; then
-    [[ "${HOST_TOOLS}" != /* ]] && HOST_TOOLS="${PWD}/${HOST_TOOLS}"
-    if [[ ! -f "${HOST_TOOLS}" ]]; then
-        echo "[ERROR] Coding tools file does not exist: ${HOST_TOOLS}"
+if [[ -n "${HOST_CODING_TOOLS}" ]]; then
+    [[ "${HOST_CODING_TOOLS}" != /* ]] && HOST_CODING_TOOLS="${PWD}/${HOST_CODING_TOOLS}"
+    if [[ ! -f "${HOST_CODING_TOOLS}" ]]; then
+        echo "[ERROR] Coding tools file does not exist: ${HOST_CODING_TOOLS}"
         exit 1
     fi
-    HOST_TOOLS_DIR="$(cd "$(dirname "${HOST_TOOLS}")" && pwd)"
-    HOST_TOOLS_NAME="$(basename "${HOST_TOOLS}")"
+    HOST_TOOLS_DIR="$(cd "$(dirname "${HOST_CODING_TOOLS}")" && pwd)"
+    HOST_TOOLS_NAME="$(basename "${HOST_CODING_TOOLS}")"
     VOLUME_ARGS+=(-v "${HOST_TOOLS_DIR}:/host_tools:ro")
     CONTAINER_ARGS+=(--coding-tools "/host_tools/${HOST_TOOLS_NAME}")
+fi
+
+# Resolve --envs_dir (Directory)
+if [[ -n "${HOST_ENVS_DIR}" ]]; then
+    [[ "${HOST_ENVS_DIR}" != /* ]] && HOST_ENVS_DIR="${PWD}/${HOST_ENVS_DIR}"
+    if [[ ! -d "${HOST_ENVS_DIR}" ]]; then
+        echo "[ERROR] Envs directory does not exist: ${HOST_ENVS_DIR}"
+        exit 1
+    fi
+    HOST_ENVS_DIR="$(cd "${HOST_ENVS_DIR}" && pwd)"
+    VOLUME_ARGS+=(-v "${HOST_ENVS_DIR}:/host_envs:ro")
+    CONTAINER_ARGS+=(--envs_dir /host_envs)
 fi
 
 # ── Run ──
